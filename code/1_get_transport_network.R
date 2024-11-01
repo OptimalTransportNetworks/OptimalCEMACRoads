@@ -384,7 +384,7 @@ edges$duration <- sym_time_mat[edges_ind]
 
 # -> To generate the 'add_links' file, execute '7.1_add_links.R' in a clean R session
 
-add_links <- qread("data/transport_network/add_links_network_30km_alpha45_mrEU_fmr15_adjusted.qs")
+add_links <- qread("data/transport_network/add_links_network_30km_alpha45_mrUS_fmr13_adjusted.qs")
 add_links_df <- line2points(add_links)
 dmat <- st_distance(nodes$geometry, add_links_df$geometry)
 add_links_df$node <- dapply(dmat, which.min)
@@ -402,20 +402,19 @@ rm(dmat, add_links_df)
 tmap_mode("plot")
 
 # Same as Figure 15 but with discrete edges (Figure 15 with real roads is obtained below)
-tm_basemap("Esri.WorldGrayCanvas", zoom = 4) +
-  tm_shape(edges) +
-  tm_lines(col = "gravity_rd", 
-           col.scale = tm_scale_intervals(values = "inferno", breaks = c(0, 5, 25, 125, 625, Inf)),
-           col.legend = tm_legend("Sum of Gravity", position = c("left", "bottom"), frame = FALSE, 
+pdf("figures/trans_CEMAC_network_actual_discretized_gravity_new_roads.pdf", width = 7.5, height = 10)
+tm_basemap("Esri.WorldGrayCanvas", zoom = 6) +
+  tm_shape(segments) +
+  tm_lines(col = "gravity_rd",
+           col.scale = tm_scale_intervals(values = "inferno", breaks = c(0, 0.25, 1, 5, 25, Inf)),
+           col.legend = tm_legend("Sum of Gravity", position = c("right", "bottom"), frame = FALSE, 
                                   text.size = 1.5, title.size = 2), lwd = 2) +
   tm_shape(add_links) + tm_lines(col = "green4", lwd = 1) + 
   tm_shape(subset(nodes, city_port)) + tm_dots(size = 0.2) +
   tm_shape(subset(nodes, !city_port)) + tm_dots(size = 0.1, fill = "grey70") +
-  tm_layout(frame = FALSE) 
-
-dev.copy(pdf, "figures/trans_CEMAC_network_actual_discretized_gravity_new_roads.pdf", 
-         width = 10, height = 10)
+  tm_layout(frame = FALSE)
 dev.off()
+
 
 
 # Now Adding Populations ----------------------------------------------------------
