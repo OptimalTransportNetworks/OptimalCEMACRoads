@@ -189,8 +189,8 @@ for (i in seq_row(routes_ind)) {
   Sys.sleep(0.5)
   # route <- osrmRoute(ss(cities_ports, r[1], c("lon", "lat")),
   #                    ss(cities_ports, r[2], c("lon", "lat")), overview = "full")
-  route <- graphhopper::gh_get_route(list(as.numeric(ss(cities_ports, routes_ind[i, 1], c("lat", "lon"))), 
-                                          as.numeric(ss(cities_ports, routes_ind[i, 2], c("lat", "lon")))), 
+  route <- graphhopper::gh_get_route(list(as.numeric(ss(cities_ports, routes_ind[i, "from"], c("lat", "lon"))), 
+                                          as.numeric(ss(cities_ports, routes_ind[i, "to"], c("lat", "lon")))), 
                                      key="30e0a17e-c0ee-4929-b539-2ebec283da2e") |> graphhopper::gh_as_sf() |>
            tryCatch(error = function(e) NULL)
   if(is.null(route)) {
@@ -348,7 +348,7 @@ dev.off()
 nrow(nodes_coord)
 all.equal(unattrib(nodes_coord), mctl(st_coordinates(nodes)))
 # This can take a few minutes: now generating distance matrix of all 1379 nodes
-dist_ttime_mats <- split_large_dist_matrix(nodes_coord, verbose = TRUE)
+dist_ttime_mats <- split_large_dist_matrix_gh(nodes_coord, verbose = TRUE)
 
 # Checks
 all.equal(dist_ttime_mats$sources, dist_ttime_mats$destinations)
@@ -402,8 +402,8 @@ rm(dmat, add_links_df)
 tmap_mode("plot")
 
 # Same as Figure 15 but with discrete edges (Figure 15 with real roads is obtained below)
-pdf("figures/trans_CEMAC_network_actual_discretized_gravity_new_roads.pdf", width = 7.5, height = 10)
-tm_basemap("Esri.WorldGrayCanvas", zoom = 6) +
+pdf("figures/trans_CEMAC_network_actual_discretized_gravity_new_roads_Esri.WorldStreetMap.pdf", width = 7.5, height = 10)
+tm_basemap("Esri.WorldStreetMap", zoom = 7) +
   tm_shape(segments) +
   tm_lines(col = "gravity_rd",
            col.scale = tm_scale_intervals(values = "inferno", breaks = c(0, 0.25, 1, 5, 25, Inf)),
@@ -419,10 +419,6 @@ dev.off()
 
 # Now Adding Populations ----------------------------------------------------------
 
-# min(nodes_dmat, na.rm = TRUE) # Need to assign to nearest node
-
-WC24_CEMAC <- fread("data/other_inputs/worldcities_continental_africa_2024.csv")
-
 # Distance Matrix
 dmat <- nodes |> st_distance(st_as_sf(WC24_CEMAC, coords = c("lon", "lat"), crs = 4326)) 
 # Remove cities part of port cities
@@ -432,13 +428,13 @@ dmat <- dmat[!nodes$city_port, !used]
 dim(dmat)
 dmat[dmat >= as_units(30, "km")] <- NA
 col <- numeric(nrow(dmat))
-m <- dapply(dmat, function(x) if (allNA(x)) col else replace(col, which.min(x), 1)) 
+m <- dapply(dmat, function(x) if (allNA(x)) col else replace(col, which.min(x), 1)) # Assigning each city to closest node
 nodes$population <- NA
-nodes$population[!nodes$city_port] <- rowSums(m %r*% WC24_CEMAC$population[!used])
+nodes$population[!nodes$city_port] <- m %*% WC24_CEMAC$population[!used] # Simming populations of closest cities
 WC24_CEMAC[, pop_cap := 5^as.integer(factor(capital, levels = c("", "admin", "minor", "primary"))) * population]
 nodes$city_country <- NA_character_
 nodes$city_country[!nodes$city_port] <- WC24_CEMAC |> 
-  with(paste(city, country, sep = " - ")) |> 
+  extract(!used, paste(city_ascii, country, sep = " - ")) |> 
   extract(dapply(m %r*% WC24_CEMAC$pop_cap[!used], 
                  function(x) if(any(x > 0.1)) which.max(x) else NA_integer_, MARGIN = 1))
 # Now adding port cities (closest matches)
@@ -478,11 +474,11 @@ save(nodes, edges, edges_ind, nodes_coord, net, add_links, WC24_CEMAC,
 load("data/transport_network/trans_CEMAC_network.RData")
 
 # This is the previous Plot
-tm_basemap("Esri.WorldGrayCanvas", zoom = 4) +
+tm_basemap("Esri.WorldGrayCanvas", zoom = 6) +
   tm_shape(edges) +
   tm_lines(col = "gravity_rd",
-           col.scale = tm_scale_intervals(values = "inferno", breaks = c(0, 5, 25, 125, 625, Inf)),
-           col.legend = tm_legend("Sum of Gravity", position = c("left", "bottom"), frame = FALSE, 
+           col.scale = tm_scale_intervals(values = "inferno", breaks = c(0, 0.25, 1, 5, 25, Inf)),
+           col.legend = tm_legend("Sum of Gravity", position = c("right", "bottom"), frame = FALSE, 
                                   text.size = 1.5, title.size = 2), lwd = 2) +
   tm_shape(add_links) + tm_lines(col = "green4", lwd = 1) + 
   tm_shape(subset(nodes, city_port)) + tm_dots(size = 0.2) +
@@ -502,38 +498,42 @@ edges_real <- edges |> qDT() |>
 nodes_coord <- st_coordinates(nodes) |> qDF() |> setNames(c("lon", "lat"))
 
 # Fetch Routes
-i <- 1L
-for (r in mrtl(edges_ind)) {
+graphhopper::gh_set_api_url("https://graphhopper.com/api/1") # /1/route
+for (i in seq_row(edges_ind)) {
   cat(i, " ")
-  route <- osrmRoute(ss(nodes_coord, r[1]),
-                     ss(nodes_coord, r[2]), overview = "simplified")
+  Sys.sleep(0.5)
+  # route <- osrmRoute(ss(nodes_coord, edges_ind[i, 1]),
+  #                    ss(nodes_coord, edges_ind[i, 2]), overview = "simplified")
+  route <- graphhopper::gh_get_route(list(as.numeric(ss(nodes_coord, edges_ind[i, "from"], c("lat", "lon"))), 
+                                          as.numeric(ss(nodes_coord, edges_ind[i, "to"], c("lat", "lon")))), 
+                                     key="30e0a17e-c0ee-4929-b539-2ebec283da2e") |> graphhopper::gh_as_sf() |>
+    tryCatch(error = function(e) NULL)
+  if(is.null(route)) {
+    cat(sprintf("\nroute %d from %s to %s could not be calculated", i, nodes$city_country[edges$from[i]], nodes$city_country[edges$to[i]]))
+    next    
+  }
   set(edges_real, i, c("duration", "distance", "geometry"), 
-      select(route, duration, distance, geometry))
-  i <- i + 1L
+      select(route, duration = time, distance, geometry))
 }
 edges_real <- edges_real |> st_as_sf(crs = st_crs(route)) |> st_make_valid()
 edges_real |> qsave("data/transport_network/edges_real_simplified.qs")
-rm(route, i, r)
+rm(route, i)
 
 # Draw the updated plot
 edges_real <- qread("data/transport_network/edges_real_simplified.qs")
 
 # <Figure 15>
-tm_basemap("Esri.WorldGrayCanvas", zoom = 4) +
+pdf("figures/trans_CEMAC_network_actual_discretized_gravity_new_roads_real_edges.pdf", width = 7.5, height = 10)
+tm_basemap("Esri.WorldGrayCanvas", zoom = 6) +
   tm_shape(edges_real) +
   tm_lines(col = "gravity_rd",
-           col.scale = tm_scale_intervals(values = "inferno", breaks = c(0, 5, 25, 125, 625, Inf)),
-           col.legend = tm_legend("Sum of Gravity", position = c("left", "bottom"), frame = FALSE, 
+           col.scale = tm_scale_intervals(values = "inferno", breaks = c(0, 0.25, 1, 5, 25, Inf)),
+           col.legend = tm_legend("Sum of Gravity", position = c("right", "bottom"), frame = FALSE, 
                                   text.size = 1.5, title.size = 2), lwd = 2) +
   tm_shape(add_links) + tm_lines(col = "green4", lwd = 1) + # limegreen # , lty = "twodash"
   tm_shape(subset(nodes, city_port)) + tm_dots(size = 0.15) +
   tm_shape(subset(nodes, !city_port & population > 0)) + tm_dots(size = 0.1, fill = "grey20") +
   tm_shape(subset(nodes, !city_port & population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
   tm_layout(frame = FALSE) #, inner.margins = c(0.1, 0.1, 0.1, 0.1))
-
-dev.copy(pdf, "figures/trans_CEMAC_network_actual_discretized_gravity_new_roads_real_edges.pdf", 
-         width = 10, height = 10)
 dev.off()
-
-
 
