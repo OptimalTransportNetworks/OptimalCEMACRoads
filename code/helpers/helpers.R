@@ -69,10 +69,10 @@ gh_get_matrix <- function(from_df, to_df = from_df, profile = "car", out_array =
                           key = "30e0a17e-c0ee-4929-b539-2ebec283da2e") {
   # https://docs.graphhopper.com/#operation/getMatrix
   if(identical(from_df, to_df)) {
-    points <-paste0("point=", paste(do.call(paste, c(rev(from_df), list(sep = ","))), collapse = "&point="))
+    points <-paste0("point=", paste(do.call(paste, c(rev(unclass(from_df)), list(sep = ","))), collapse = "&point="))
   } else {
-    points <-paste0("from_point=", paste(do.call(paste, c(rev(from_df), list(sep = ","))), collapse = "&from_point="),
-                    "&to_point=", paste(do.call(paste, c(rev(to_df), list(sep = ","))), collapse = "&to_point="))
+    points <-paste0("from_point=", paste(do.call(paste, c(rev(unclass(from_df)), list(sep = ","))), collapse = "&from_point="),
+                    "&to_point=", paste(do.call(paste, c(rev(unclass(to_df)), list(sep = ","))), collapse = "&to_point="))
   }
   query <- list(
     profile = profile,
@@ -84,10 +84,15 @@ gh_get_matrix <- function(from_df, to_df = from_df, profile = "car", out_array =
                          paste(paste(names(query), as.character(query), sep = "="), collapse = "&"))
   response <- httr::GET(query_string)
   response <- httr::content(response, as = "parsed")
-  lapply(response[c("times", "distances")], simplify2array)
+  res <- lapply(response[out_array], simplify2array)
+  lapply(res, function(x) {
+    if(!is.matrix(x)) stop("no data returned")
+    if(!is.numeric(x)) storage.mode(x) <- "numeric"
+    t(x) # Need to transpose
+  })
 }
 
-split_large_dist_matrix_gh <- function(data, chunk_size = 10, verbose = FALSE, ...) {
+split_large_dist_matrix_gh <- function(data, chunk_size = 50, verbose = FALSE, ...) {
   n = nrow(data)
   res_list = list()
   
@@ -108,9 +113,22 @@ split_large_dist_matrix_gh <- function(data, chunk_size = 10, verbose = FALSE, .
         cat(count," ")
       }
       
-      # Perform the API call for the current chunks
-      r_ij = gh_get_matrix(ds_i, ds_j, ...)
+      Sys.sleep(0.5)
       
+      # Perform the API call for the current chunks
+      r_ij = tryCatch(gh_get_matrix(ds_i, ds_j, ...), error = function(e) {
+        if(!is.data.frame(ds_i) || nrow(ds_i) < 1) stop("ds_i is invalid")
+        if(!is.data.frame(ds_j) || nrow(ds_j) < 1) stop("ds_j is invalid")
+        r <- tryCatch(gh_get_matrix(ds_i, ds_j, ...), error = function(e) list(NULL))
+        cnt <- 0L
+        while (!is.matrix(r[[1]]) && cnt < 10L) {
+          cnt <- cnt + 1L
+          Sys.sleep(5)
+          r <- tryCatch(gh_get_matrix(ds_i, ds_j, ...), error = function(e) return(r))
+        }
+        return(r)
+      })
+
       # Store the result in a list for later combination
       res_list[[paste(i, j, sep = "_")]] = r_ij
     }
@@ -135,7 +153,7 @@ split_large_dist_matrix_gh <- function(data, chunk_size = 10, verbose = FALSE, .
   
   # Create a result list to return
   res = list(
-    points = data,
+    sources = data,
     durations = res_durations,
     distances = res_distances
   )
