@@ -113,12 +113,13 @@ split_large_dist_matrix_gh <- function(data, chunk_size = 50, verbose = FALSE, .
         cat(count," ")
       }
       
-      Sys.sleep(0.5)
+      Sys.sleep(5)
       
       # Perform the API call for the current chunks
       r_ij = tryCatch(gh_get_matrix(ds_i, ds_j, ...), error = function(e) {
         if(!is.data.frame(ds_i) || nrow(ds_i) < 1) stop("ds_i is invalid")
         if(!is.data.frame(ds_j) || nrow(ds_j) < 1) stop("ds_j is invalid")
+        Sys.sleep(20)
         r <- tryCatch(gh_get_matrix(ds_i, ds_j, ...), error = function(e) list(NULL))
         cnt <- 0L
         while (!is.matrix(r[[1]]) && cnt < 10L) {
@@ -126,6 +127,7 @@ split_large_dist_matrix_gh <- function(data, chunk_size = 50, verbose = FALSE, .
           Sys.sleep(5)
           r <- tryCatch(gh_get_matrix(ds_i, ds_j, ...), error = function(e) return(r))
         }
+        if(!is.matrix(r[[1]])) stop("Not able to fetch result!")
         return(r)
       })
 
@@ -183,6 +185,7 @@ join_within_radius <- function(d1, d2, coords = c("lon", "lat"), size = "populat
   d1_p <- s2_lnglat(d1[[coords[1]]], d1[[coords[2]]])
   d2_p <- s2_lnglat(d2[[coords[1]]], d2[[coords[2]]])
   dmat <- st_distance(d2_p, d1_p) |> set_units("km")
+  dmat[dmat != fmin(t(dmat))] <- Inf # Only closest city
   d1[[size]] <- fsum((dmat < as_units(radius_km, "km")) * d2[[size]])
   d1
 }
