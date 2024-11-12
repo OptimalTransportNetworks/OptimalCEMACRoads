@@ -161,7 +161,7 @@ fsum(nodes$population) / fsum(AP24_CEMAC$population)
 # 45% of total CEMAC population
 fsum(nodes$population) / CEMAC_GDP[year == max(year), population]
 # Now scaling
-nodes$gdp = proportions(nodes$wealth) * 0.45 * CEMAC_GDP[year == max(year), gdp]
+nodes$gdp = proportions(nodes$wealth) * 0.8 * CEMAC_GDP[year == max(year), gdp] # Assume 80% of GDP (big cities are more productive)
 
 # Computing total market access
 (MA_real <- total_MA(dist_ttime_mats$distances, nodes$gdp))
