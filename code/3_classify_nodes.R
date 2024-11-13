@@ -60,6 +60,7 @@ tm_basemap("CartoDB.Positron", zoom = 6) +
 
 # Classification
 settfm(edges, speed_kmh = (distance / 1000) / (duration / 60^2))
+descr(edges$speed_kmh)
 tfm(edges_real) <- qDT(edges) |> select(-geometry)
 
 settfm(nodes, major_city_port = replace_na(population > 2e5 | outflows > 1e6))
@@ -78,27 +79,87 @@ setv(nodes$product, whichNA(nodes$product), seq_along(largest) + 4L)
 nodes_param <- fread("data/transport_network/csv/graph_nodes.csv")
 nodes_param |> select(lon, lat) |> qM() |> subtract(st_coordinates(nodes)) |> descr() |> print(digits = 7)
 nodes_param$product <- nodes$product
-nodes_param |> atomic_elem() |> qDT() |> fwrite("data/transport_network/csv/graph_nodes.csv")
+# nodes_param |> atomic_elem() |> qDT() |> fwrite("data/transport_network/csv/graph_nodes.csv")
 rm(nodes_param)
 attr(nodes$product, "levels") <- c("Small Town", "City > 50K", "Port", "City > 100K", paste("Major City", seq_along(largest)))
 class(nodes$product) <- "factor"
 
 # Plotting
 # <Figure 41: LHS> (Use nname <- "all_routes" above to generate the RHS)
-pdf("figures/GE/trans_africa_network_reduced_20_products_EWT.pdf", width = 7.5, height = 9)
-tm_basemap("Esri.WorldTopoMap", zoom = 6) +
-  tm_shape(edges_real) + # Use edges_real to generate <Figure A21>
+pdf("figures/GE/trans_africa_network_reduced_20_products.pdf", width = 7.5, height = 9)
+tm_basemap("CartoDB.Positron", zoom = 6) +
+  tm_shape(subset(edges_real, speed_kmh > 10)) + # Use edges_real to generate <Figure A21>
   tm_lines(col = "speed_kmh", 
            col.legend = tm_legend("Speed", position = c("right", "bottom"), stack = "h", 
-                                  frame = FALSE, text.size = 1.5, title.size = 1.7),
+                                  frame = FALSE, text.size = 1.3, title.size = 1.6),
            col.scale = tm_scale_continuous(6, values = "turbo"), # 7, 
            lwd = 2) + 
   tm_shape(droplevels(mutate(nodes, product = fifelse(unclass(product) > 4L, NA, product)))) + 
   tm_dots(fill = "product", size = 0.25, 
           fill.scale = tm_scale_categorical(values = "turbo", value.na = "purple3", label.na = "Own Product"),
           fill.legend = tm_legend("Product", position = c("right", "bottom"), # stack = "h", 
-                                  frame = FALSE, text.size = 1.5, title.size = 1.7)) +
+                                  frame = FALSE, text.size = 1.3, title.size = 1.6)) +
   tm_shape(subset(nodes, unclass(product) > 5L)) + tm_dots(size = 0.5, fill = "purple3") +
   tm_layout(frame = FALSE)
 dev.off()         
+
+
+# Plot population and productivity (for GE Calibration) ------------------------------------------------------
+
+graph_nodes <- fread("data/transport_network/csv/graph_nodes.csv") 
+graph_edges <- fread("data/transport_network/csv/graph_orig.csv") 
+
+# Now: Plotting Productivity
+graph_nodes %<>%
+  mutate(citys = iif(product > 4L, 5L, product), 
+         prod_in = replace_na(37*outflows/population, 0),
+         prod = IWI + prod_in, 
+         total_prod = prod * population, 
+         total_dom_prod = IWI * population) %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326)
+
+# Check: This is imports divided by African GDP: 26.5%
+with(graph_nodes, sum(prod_in*population)/sum(IWI*population))
+with(graph_nodes, sum(prod*population)/sum(IWI*population))
+
+table(graph_nodes$citys)
+
+# <Table 8>
+graph_nodes |> qDT() |> 
+  collap(prod_in ~ citys, list(fsum, fmean, fmedian), give.names = FALSE) |> 
+  transpose(make.names = "citys", keep.names = "stat") |> 
+  tfmv(is.numeric, scales::label_number(scale_cut = scales::cut_short_scale(), accuracy = 0.01)) |>
+  xtable::xtable() |> print(include.r = FALSE, booktabs = TRUE)
+
+# load("data/transport_network/trans_CEMAC_network.RData")
+edges_real <- qread("data/transport_network/edges_real_simplified.qs")
+
+# <Figure 33>
+pdf("figures/trans_CEMAC_network_GE_parameterization_latest.pdf", width = 9.5, height = 12)
+tm_basemap("CartoDB.Positron", zoom = 6) +
+  tm_shape(mutate(edges_real, speed_kmh = (edges$distance/1000)/(edges$duration/60^2)) |> 
+             rowbind(mutate(add_links, speed_kmh = 0), fill = TRUE)) +
+  tm_lines(col = "speed_kmh", 
+           col.legend = tm_legend("Speed (km/h)", position = tm_pos_in(0.57, 0.4), stack = "h", frame = FALSE, text.size = 1.2, title.size = 1.4),
+           col.scale = tm_scale_continuous(values = "turbo"), # 7, 
+           lwd = 2) + 
+  tm_shape(subset(graph_nodes, outflows > 0) |>
+             mutate(ofl = round(outflows / 1e6, 1))) + 
+  tm_dots(size = "ofl", 
+          size.scale = tm_scale_intervals(5, style = "jenks", values.scale = 2), # 
+          size.legend = tm_legend("Port Outflows (M)", position = tm_pos_in(0.57, 0.4), frame = FALSE, text.size = 1.2, title.size = 1.4),
+          fill = scales::alpha("black", 0.25)) +
+  tm_shape(subset(graph_nodes, population > 0) |> mutate(pop = population / 1000)) + 
+  tm_dots(size = "pop", 
+          size.scale = tm_scale_intervals(breaks = c(0, 200, 1000, Inf),
+                                          values = c(1.5, 3, 5)*0.2),
+          size.legend = tm_legend("Population (K)", position = tm_pos_in(0.57, 0.17), stack = "h", frame = FALSE, text.size = 1.2, title.size = 1.4),
+          fill = "IWI",
+          size.free = TRUE,
+          fill.scale = tm_scale_intervals(4, values = "inferno"), #viridis::inferno(5, alpha = 0.5, direction = -1)),
+          fill.legend = tm_legend("Productivity (IWI)", position = tm_pos_in(0.57, 0.17), frame = FALSE, text.size = 1.2, title.size = 1.4)) +
+  tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
+  tm_layout(frame = FALSE)
+dev.off()
+
 

@@ -568,7 +568,7 @@ edges_real <- qread("data/transport_network/edges_real_simplified.qs")
 
 # <Figure 15>
 pdf("figures/trans_CEMAC_network_actual_discretized_gravity_new_roads_real_edges.pdf", width = 7.5, height = 10)
-tm_basemap("Esri.WorldGrayCanvas", zoom = 6) +
+tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_shape(edges_real) +
   tm_lines(col = "gravity_rd",
            col.scale = tm_scale_intervals(values = "inferno", breaks = c(0, 1, 5, 25, 100, Inf)),
