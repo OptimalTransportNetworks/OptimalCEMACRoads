@@ -1,0 +1,224 @@
+\documentclass[a4paper]{article}
+
+%% Language and font encodings
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+% \usepackage[T1]{fontenc}
+
+%% Sets page size and margins
+\usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+%% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\usepackage{apacite} % APA style citations
+\AtBeginDocument{\urlstyle{APACsame}}  % Links in APA citytions same formatting
+\usepackage{tabulary}
+\usepackage{natbib} % natbib citations: \citep{} and \citet{} for in-text
+\usepackage{booktabs}
+% If you use \tableofcontents, this adjusts the name
+%\addto\captionsenglish{\renewcommand*\contentsname{Table of Contents}}
+\usepackage{float}
+\usepackage[bottom]{footmisc}
+
+\title{\textbf{Optimal Road Investments in CEMAC}}
+\author{Sebastian Krantz}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+
+This paper characterizes optimal road investments in the Economic and Monetary Community of Central Africa (CEMAC). Methodologically it closely follows \citet{krantz2024optimal}. It also tries to take account of existing and planned road projects in the region, such as the Multimodal \href{https://www.afdb.org/en/documents/ppm-rca-projet-de-developpement-du-corridor-de-transport-multimodal-pointe-noire-brazzaville-bangui-ndjamena-cd13-phase-1}{Point-Noire-Brazzaville-Bangui-Ndjamena corridor project (CD13)} and several smaller road projects. \newline 
+
+As in \citet{krantz2024optimal}, the first step is building an accurate graph representation of the region's road network and economic geography. Once a graph is built, partial and general equilibrium analysis is applied to find market-access and welfare maximizing road investments, respectively. Road projects are taken into account through additional nodes in the graph designating the start and end points of road projects. The analytical focus is however on optimal (future) investments. 
+
+\section{Transport Network Graph}
+
+
+To build the graph, I start with a selection of the largest cities within a 100km radius with a population above 50,000. For this I use the updated (2024) Africapolis data tracking the populations of 525 agglomerations in CEMAC in 5-year intervals \citep{africapolis2024}. I use the population projection for 2025, and refine the centroid for larger agglomerations, which in Afrikapolis is the centroid of the built-up area but not necessarily the economic center of a city, with geographically accurate places data from \href{https://public.opendatasoft.com/explore/dataset/geonames-all-cities-with-a-population-500/table/?disjunctive.country}{Geonames}. This yields 54 cities, of which 6 have ports, of which Pointe Noire, Kribi and Douala are large and Bata, Libreville and Port Gentil are small, according to outflows in 2020Q1 recorded by the \href{https://datacatalog.worldbank.org/search/dataset/0038118/Global---International-Ports}{World Bank}. \newline 
+
+Following \citet{krantz2024optimal}, I then compute $(54^2-54)/2 = 1431$ fastest car routes between all of these cities and process them into a network of 196 nodes and 313 edges by simplifying and intersecting routes and clustering the intersection points within a 10km radius, where a gravity weight is applied to choose among intersection points within a cluster.\footnote{See the Notes of Figure \ref{fig:ROADS} to learn more about gravity.} Because the OpenStreetMap (OSM) routing engine (OSRM) does not navigate along several smaller roads in the region, sometimes in contrast to Google Maps, I depart from \citet{krantz2024optimal} and use the Graphhopper routing engine instead, which is also OSM-based but has a different car profile and a different algorithm which I find gives more natural and direct results in the region.\footnote{Google Maps could, in theory, also be used, however, its API is behind a paywall, and it does not return exact geometries of routes as the underlying Google Maps spatial data is private $-$ which could present problems to my method of intersecting/processing the routes. Graphhopper is also a commercial product widely used in logistics.}  \newline 
+
+Finally, following \citet{krantz2024optimal}, I apply a network finding algorithm (described in \citet{krantz2024optimal} Section 4.3), parameterized with a $\alpha = 45^\circ$ maximum angle for intercepting nodes, the European route efficiency estimate of 0.767, and removing links with a real route efficiency of 2/3 or higher. The algorithm retains 71 links that, if straight, reduce travel distance by $\geq$50\%. \newline
+
+Figure \ref{fig:ROADS} shows the resulting graph, with proposed links in green, against a plain and topographic map background. Ostensibly the highest expected traffic volume is in the Douala-Yaounde region. It is also noteworthy that some of the fastest car routes from western Cameroon up to N'Djamena in Chad traverse through eastern Nigeria. The coastal cities of Libreville and Port-Gentil are connected via a ferry, the only non-road-based transport in this graph.  % \newline 
+
+
+\begin{figure}[H] 
+\centering
+\caption{\label{fig:ROADS} CEMAC Road Network: Optimal Graph Representation}
+% \vspace{2mm}
+\begin{tabular}{cc}
+\includegraphics[width=0.48\textwidth]{"../figures/trans_CEMAC_network_actual_discretized_gravity_new_roads_real_edges.pdf"} &
+\includegraphics[width=0.48\textwidth]{"../figures/trans_CEMAC_network_actual_discretized_gravity_new_roads_OpenTopoMap.pdf"} \\ [-0.2em]
+\end{tabular}
+\raggedright
+\scriptsize 
+\emph{Notes:} Figure shows road network graph against a plain (LHS) and topographic (RHS) background map. The network is obtained from 1431 fastest car routes between 54 cities/agglomerations. Each route is assigned a 'Gravity' estimate amounting to the population (in thousands) of start and end city divided by the road distance in meters. The 'Sum of Gravity' is the sum across all routes using this segment in the network. It is a measure of expected traffic volume. The green lines indicate high-yield network extensions yielding $\geq$50\% reductions in road distance between adjacent nodes. % \\ \vspace{-5mm}
+\end{figure}
+
+To parameterize the graph, I add the populations of smaller agglomerations within 30km of these nodes to the node population count, excluding Nigerian agglomerations because CEMAC planners should not maximize welfare or market access in Nigeria. This yields 119 nodes with positive populations, of which 54 are the large cities routed from/to. These nodes account for 80\% of the urban population of CEMAC according to Africapolis 2025 projection, but only for 45\% of the total population in 2023 according to the World Development Indicators database. Since large cities generally exhibit higher productivities than small cities and rural populations, and, in the absence of a convincing way to measure productivity,\footnote{\citet{krantz2024optimal} in the appendix shows that nightlights per capita is not a convincing productivity measure. \vspace{-3mm}} I make the assumption that they also account for 80\% of the regions GDP. Readers who find this estimate high should note that road projects take 3-5 years to complete, the region's real GDP grew by 2.2\% annually over the last 10 years, and the urban population share, currently at 50\%, is increasing by 0.5 percentage points per year (own calculations using Africa Monitor data \citep{krantz2024africamonitor}). Thus, fixing the GDP of these nodes at 80\% of the region's 2023 GDP (in constant 2015 USD) is moderate in 2028-30.   \newline 
+
+  To better distribute GDP across these nodes, I employ the high-resolution remotely sensed International Wealth Index (IWI) by \citet{lee2022high}. The index estimates asset-based household wealth on a scale from 0 to 100 based on a fixed set of household items recorded in DHS surveys. \citet{lee2022high} combine daylight satellite imagery and OpenStreetMap data in an iterative ML framework to predict the IWI from DHS surveys conducted in 25 Sub-Saharan African (SSA) countries since 2017, and obtain a cross-country $R^2$ of 91.7\%. Their predictions cover all populated areas at an effective resolution of 1.6km. \newline 
+  
+  To estimate node productivity, I take an inverse-distance-weighted average of all IWI estimates within 10km from each node. This average ranges from $\sim 65$ in port cities such as Port-Gentil, Douala, and Libreville, to $\sim 10$ in some remote cities such as Baibokoum in Chad. I then multiply it with the node population to measure total wealth, and use that to distribute the GDP measure of 80\% of the regions real 2023 GDP, amounting to 72.7 billion 2015 USD (total GDP is \$90.9B), across the 119 populated nodes. 
+  
+\section{Optimal Marginal Network Investments}
+
+This section follows \citet{krantz2024optimal} Section 5 by first examining the returns to proposed new links, then to upgrading existing links, followed by joint scenarios. To limit the scope of exposition, cost-benefit analysis is only done for the joint scenarios. 
+
+\subsection{Building New Links}
+
+The route efficiency (RE) of the network is 0.702, and the RE of the average segment is 0.828. Assuming that the proposed segments (highlighted in green in Figure \ref{fig:ROADS}) also have a RE if 0.828 implies that building all of them increases the NRE by 6.7\% to 0.749. When computing a weighted average of RE across routes using gravity (the product of origin and destination population divided by their geodesic distance) as weights, the weighted NRE measure is 0.718, and building all proposed segments raises it by 4.7\% to 0.753. As in \citet{krantz2024optimal}, the total NRE gain along all optimal routes can also be evaluated individually by segment. Figure \ref{fig:NRE_DA_TAN} shows the percentage gain in NRE from constructing each link. In the unweighted case some large border crossing links in Congo, Gabon, Cameroon and CAR yield high NRE gains, but with gravity weights the most high yield links with a NRE gain of more than 0.5\% are in Ecuatorial Guinea. A look on any street map reveals that the country is not well connected to its neighbours to the north and south.
+
+\begin{figure}[h!] % \vspace{-3mm}
+\centering
+\caption{\label{fig:NRE_DA_TAN} Percentage Gain in Network RE from Constructing Each Proposed Link}
+\vspace{2mm}
+\begin{tabular}{cc}
+Unweighted NRE Gain (\%) & Gravity Weighted NRE Gain (\%) \\ % Improved US-Grade Network\\
+\includegraphics[width=0.48\textwidth]{"../figures/PE/trans_CEMAC_network_NRE_gain_perc.pdf"} &
+\includegraphics[width=0.48\textwidth]{"../figures/PE/trans_CEMAC_network_NRE_wtd_gain_perc.pdf"} \\ [-0.2em]
+\end{tabular}
+% \raggedright
+\scriptsize 
+\emph{Notes:} Figure shows (weighted) average route efficiency (RE) gains across all trips from building a specific link/edge. 
+ % \vspace{-1mm}
+\end{figure}
+
+Similarly, we can consider total market access (MA) implied by the network, where MA of node $i$ is the sum of the estimated GDP's of all other nodes $j$ divided by their respective road distance along the fastest $i\to j$ route. The total network MA is then the sum of MA across all nodes. The total network MA is 23.1 billion USD'15 per km. Building all proposed links increases MA by 5.2\%. Under 2019 border frictions as in \citet{krantz2024optimal}, the MA gain from all proposed links drops to 3\%. Figure \ref{fig:MA_DA_TAN} shows total MA gains from building each link with and without frictions. Ostensibly, frictions reduce the value of new border-crossing links. In fact the marginal gains from all links are lower under frictions as long as the route is fixed and transiting is less costly.  \citet{krantz2024optimal} discusses other cases which I refrain from here, the focus should not be on the impact of border frictions except to make it clear that they should be removed as much as possible. 
+
+
+\begin{figure}[H]  \vspace{-1mm}
+\centering
+\caption{\label{fig:MA_DA_TAN} Percentage Gain in Market Access (GDP) from Constructing Each Proposed Link}
+\vspace{2mm}
+\begin{tabular}{cc}
+No Frictions & 2019 Doing Business Frictions \\
+\includegraphics[width=0.48\textwidth]{"../figures/PE/trans_CEMAC_network_MA_gain_perc.pdf"} &
+\includegraphics[width=0.48\textwidth]{"../figures/PE/trans_CEMAC_network_MA_gain_perc_bc.pdf"}  \\ [-0.2em]
+\end{tabular}
+% \raggedright
+\scriptsize 
+\emph{Notes:} Figure shows total road-distance denominated MA gains measured (summed) across all trips from building a link. 
+ % \vspace{-2mm}
+\end{figure}
+
+\subsection{Upgrading Existing Links}
+
+The median link speed of the network is 78.7km/h, ranging from 6.2km/h for the slow ferry connection from Libreville to Port-Gentil, to 109.4km/h on the highway from Bata to Mongomo in Equatorial Guinea. In comparison with \citet{krantz2024optimal} this median seems quite fast, indicating that Graphhopper may be optimistic about road quality. Figure \ref{fig:ALS} shows the speed of each link. 
+
+\begin{figure}[H]  \vspace{-1mm}
+\centering
+\caption{\label{fig:ALS} Average Link Speed}
+\vspace{2mm}
+\begin{tabular}{cc}
+\includegraphics[width=0.48\textwidth, trim = {0 0.4cm 1.5cm 2.5cm}, clip]{"../figures/trans_CEMAC_network_average_link_speed_hist.pdf"} &
+\includegraphics[width=0.48\textwidth]{"../figures/trans_CEMAC_network_average_link_speed.pdf"}  \\ % [-0.2em]
+\end{tabular}
+% \raggedright
+\scriptsize 
+\emph{Notes:} Figure shows total average speed along each link, according to the Graphhopper routing engine running on OSM. 
+\end{figure}
+
+The total travel-time-denominated MA implied by the network is 31 billion USD'15 per minute. Upgrading all roads to allow travel speeds of 100km/h, raises total MA by 24.3\%. Under border frictions the MA drops to 18.2 billion USD'15, and the gains from upgrading all roads is 22.5\%. Figure \ref{fig:MA_TT} shows the gains from upgrading each link individually. 
+
+\begin{figure}[H]  \vspace{-1mm}
+\centering
+\caption{\label{fig:MA_TT} Percentage Gain in Market Access from Upgrading Each Link to $\geq$100km/h}
+\vspace{2mm}
+\begin{tabular}{cc}
+No Frictions & 2019 Doing Business Frictions \\
+\includegraphics[width=0.48\textwidth]{"../figures/PE/trans_CEMAC_network_MA_100_min_speed_perc.pdf"} &
+\includegraphics[width=0.48\textwidth]{"../figures/PE/trans_CEMAC_network_MA_100_min_speed_bt_perc.pdf"}  \\ [-0.2em]
+\end{tabular}
+\raggedright
+\scriptsize 
+\emph{Notes:} Figure shows total travel-time-denominated MA gains measured (summed) across all trips from upgrading a link to allow travel speeds of $\geq$100km/h. 
+ % \vspace{-2mm}
+\end{figure}
+
+Ostensibly, upgrading links in the populated areas of Cameroon, the by far largest economy among the 6, yields the greatest MA returns, especially under border frictions. Without frictions, better connecting the economic center of Cameroon up north and east also yields high MA gains.  
+
+\subsection{Cost-Benefit Analysis}
+
+To decide in which roads to invest, the cost of building roads must be taken into consideration. Following \citet{krantz2024optimal}, which in turn follows \citet{collier2016cost} using the updated Road Cost Knowledge System (ROCKS) database, I allow for heterogeneity in road construction costs. The median cost of a 2-lane highway in SSA is \$611K/km (2015 USD). I follow \citet{fajgelbaum2020optimal} and \citet{graff2024spatial} and only consider average returns to ruggedness and distance, as well as population. My preferred specification is 
+\begin{equation} \label{eq:COST}
+\ln\left(\frac{\text{cost}}{km}\right) = \ln(X) -0.11 \times (\text{dist} > 50km) + 0.12 \times \ln(\text{rugg}) + 0.085 \times \ln\left(\frac{\text{pop}}{km^2}+1\right),
+\end{equation}
+where $X$ = 120,000 for new roads, $X$ = 101,600 for upgrades, $X$ = 64,600 for mixed works, and $X$ = 28.400 for resurfacing. The first part is taken from Eq. (21) of \citet{fajgelbaum2020optimal}. The 120,000 USD/km constant makes the mean cost/km across all existing links in Africa approximately equal to \$611K/km, and the other thresholds adjust for different kinds of upgrading costs following \citet{krantz2024optimal}: (1) roads with a travel speed below 60km/h require a full upgrade at an average cost of \$513K/km; (2) roads with travel speeds of 60-79km/h may require mixed works at an average cost of \$326K/km; (3) roads with travel speeds of 80km/h and higher require an resurfacing at \$143K/km on average. \newline 
+
+Figure \ref{fig:RUGG_POP} shows ruggedness from \citep{nunn2012ruggedness} and WorldPop 2020 population density, both estimated within a 3km two-sided buffer around existing and new links. Ostensibly, the area around Bamenda in Cameroon, and further north along the Cameroon-Nigeria border is very rugged. The areas around major cities, especially Douala and Yaounde, are highly populated. 
+
+\begin{figure}[H] \vspace{-1mm}
+\centering
+\caption{\label{fig:RUGG_POP} Ruggedness and Population Density within 3km Buffer around Links}
+\vspace{2mm}
+\begin{tabular}{cc}
+Ruggedness \citep{nunn2012ruggedness} & Population Density (WorldPop 2020) \\
+\includegraphics[width=0.48\textwidth]{"../figures/trans_CEMAC_network_rugg.pdf"} &
+\includegraphics[width=0.48\textwidth]{"../figures/trans_CEMAC_network_pop_wpop_km2.pdf"} \\ [-0.2em]
+\end{tabular}
+% \raggedright
+\scriptsize 
+\emph{Notes:} Figure shows average ruggedness and total population within a 3km (two-sided) buffer around links.
+% \vspace{-2mm}
+\end{figure}
+
+Figure \ref{fig:CTW} shows the different types of work and their estimated costs. The total network cost is estimated at 19 billion USD'15, and all proposed links are estimated to cost 6.1 billion USD'15. Total upgrading cost is estimated at 7.25 billion USD'15, of which 2.54 billion is for resurfacing, 3.71 billion mixed works, and 1 billion upgrades. 
+
+\begin{figure}[H] \vspace{-1mm}
+\centering
+\caption{\label{fig:CTW} Type of Work and Cost}
+\vspace{2mm}
+\begin{tabular}{cc}
+Type of Upgrading Work & Cost Per Km \\
+\includegraphics[width=0.48\textwidth]{"../figures/trans_CEMAC_network_type_of_work.pdf"} &
+\includegraphics[width=0.48\textwidth]{"../figures/trans_CEMAC_network_upgrading_costs.pdf"} \\ [-0.2em]
+\end{tabular}
+% \raggedright
+\scriptsize 
+\emph{Notes:} Figure shows the type of work depending on link speed: links $<$60km/h need upgrading, between 60 and 80km/h need mixed works, and above 80km/h need resurfacing. Links above 100km/h do not need additional work. 
+\end{figure}
+
+Following \citet{krantz2024optimal}, I compute link-level cost-benefit ratios as the gain in MA divided by the cost, yielding estimates denominated in \$/min/\$ or 'dollar per minute per dollar invested'. The economic value if such a metric depends on how increases in MA translate into increases in economic activity.  \citet{donaldson2016railroads} estimates of railroad-induced increases in MA on US land values between 1870 and 1890 suggest that MA translates into economic activity at a rate of 2:1, however, the contemporary African context may be very different. Readers should also note that, particularly in comparison with \citet{krantz2024optimal}, the focus on CEMAC alone yields smaller estimates of MA gains from road projects because locations outside of CEMAC which could benefit from them, including traders transiting through CEMAC, are not considered. 
+
+
+
+\section{Optimal Network Investments in General Equilibrium}
+
+The General Equilibrium simulations also closely follow \citet{krantz2024optimal}, utilizing the quantitative framework of \citet{fajgelbaum2020optimal} and some parameters taken from \citet{graff2024spatial}. As in \citet{krantz2024optimal}, I let ports produce the imports. Since the region also has land borders, I apply the same scaling factor of 37 to the ports' export volume in 2020 Q1, which is obtained considering imports and ports of the entire continent. This yields that imports through the regions 6 ports are 16.9\% of the regions GDP. The total imports of goods and services in the region from 2019-2023 was 28.2\% of GDP, and the merchandise imports were 19.2\% of GDP, so this assumes that the bulk of merchandise imports came in through the regions 6 international ports.  \newline 
+
+To create incentives for trade through the network, I let 16 cities with a population of $>$200,000 or a port with outflows of $>$1M TEU in 2020 Q1 produce their own product. The remaining cities are classified into ports (positive outflows), large city with population $>$ 100,000, medium-sized city with population $>$50,000, and town/unpopulated node otherwise. The nodes are parameterized with IWI productivity and population. Port cities have additional international productivity amounting to $(\text{outflows [TEU] in 2020 Q1}\times 37)/\text{population}$. Edges are parameterized with speed in km/h, infrastructure building cost, iceberg trade cost, and (optionally) border frictions, exactly following \citet{krantz2024optimal}. Figure \ref{fig:Graph_Calib} shows the classified and parameterized graph. 
+
+
+\begin{figure}[h!] \vspace{-2mm}
+\centering
+\caption{\label{fig:Graph_Calib} Calibrated Network for General Equilibrium Simulations}
+\vspace{2mm}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{cc}
+Nodes by Type & Calibration Details \\
+\includegraphics[width=0.505\textwidth]{"../figures/GE/trans_africa_network_reduced_20_products.pdf"} &
+\includegraphics[width=0.48\textwidth]{"../figures/trans_CEMAC_network_GE_parameterization_latest.pdf"} \\ [-0.2em]
+\end{tabular}
+}
+% \raggedright
+\scriptsize 
+\emph{Notes:} Figure shows network calibrated with speed, city population and productivity (IWI) and port outflows. 
+% \vspace{-10cm}
+\end{figure}
+
+I set the elasticity of substitution equal to $\sigma = 3.8$ following \citet{bajzik2020estimating} and \citet{armington1969theory} because this setting resembles products differentiated by origin traded in an international context. I simulate cases with ($\rho = 2$) or without ($\rho = 0$) inequality aversion and border frictions, as well as with or without new links, for planning budgets of 1 or 2 billion USD'15, which is about 1.19 billion and 2.38 billion in current USD, respectively. In comparison, total road project costs amount to. 
+
+
+
+
+\newpage
+
+\bibliographystyle{apacite}
+\bibliography{bibliography} % This links to a file bibliography.bib with the citations
+
+\end{document}
