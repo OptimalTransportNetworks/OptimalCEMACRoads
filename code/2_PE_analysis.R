@@ -118,7 +118,7 @@ tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_lines(lwd = 2, col = "grey70") +
   tm_shape(add_links) + 
   tm_lines(col = "nre_wtd_gain_perc", 
-           col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.005, 0.025, 0.1, 0.25, 0.5, Inf)),   
+           col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.025, 0.1, 0.25, 0.5, Inf)),   
            col.legend = tm_legend(expression(Delta~"%"~"NRE WTD"), position = c("right", "bottom"), frame = FALSE, 
                                   text.size = 1.5, title.size = 2), lwd = 2) + 
   tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
@@ -195,7 +195,7 @@ tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_lines(lwd = 2, col = "grey70") +
   tm_shape(add_links) + 
   tm_lines(col = "MA_gain_perc", 
-           col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.005, 0.025, 0.1, 0.25, 0.5, Inf)),
+           col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.025, 0.1, 0.25, 0.5, Inf)),
            col.legend = tm_legend(expression(Delta~"%"~"MA"), position = c("right", "bottom"), frame = FALSE, 
                                   text.size = 1.5, title.size = 2), lwd = 2) + 
   tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
@@ -280,7 +280,7 @@ tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_lines(lwd = 2, col = "grey70") +
   tm_shape(add_links) + 
   tm_lines(col = "MA_gain_perc_bc", 
-           col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.005, 0.025, 0.1, 0.25, 0.5, Inf)),
+           col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.025, 0.1, 0.25, 0.5, Inf)),
            col.legend = tm_legend(expression(Delta~"%"~"MA"), position = c("right", "bottom"), frame = FALSE, 
                                   text.size = 1.5, title.size = 2), lwd = 2) + 
   tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
@@ -371,7 +371,7 @@ tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_lines(lwd = 2, col = "grey70") +
   tm_shape(add_links) + 
   tm_lines(col = "MA_gain_perc_bc_opt", 
-           col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.005, 0.025, 0.1, 0.25, 0.5, Inf)),
+           col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.025, 0.1, 0.25, 0.5, Inf)),
            col.legend = tm_legend(expression(Delta~"%"~"MA"), position = c("right", "bottom"), frame = FALSE, 
                                   text.size = 1.5, title.size = 2), lwd = 2) +
   tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
@@ -1030,6 +1030,7 @@ settfm(edges, MA_gain_pusd = perch_to_diff(MA_100_min_speed, MA_100_min_speed_pe
 descr(edges$MA_gain_pusd)
 # edges$MA_gain_pusd |> replace_na(0, set = TRUE)
 proportions(table(edges$MA_gain_pusd < 1))
+proportions(table(edges$MA_gain_pusd < 2))
 
 # <Figure 30: LHS (Top)>
 tfm(edges_real) <- qDT(edges) |> select(-geometry)
@@ -1040,7 +1041,7 @@ tm_basemap("CartoDB.Positron", zoom = 6) +
            col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.1, 0.2, 0.5, 1, 2, 5, Inf)),
            col.legend = tm_legend(expression(Delta~"MA/USD"),
                                   position = c("right", "bottom"), frame = FALSE, 
-                                  text.size = 1.5, title.size = 2), lwd = 2) + 
+                                  text.size = 1.25, title.size = 1.7), lwd = 2) + 
   tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
   tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
   tm_layout(frame = FALSE)
@@ -1051,6 +1052,8 @@ settfm(edges, MA_gain_pusd_bt = perch_to_diff(MA_100_min_speed_bt, MA_100_min_sp
 descr(edges$MA_gain_pusd_bt)
 # edges$MA_gain_pusd_bt |> replace_na(0, set = TRUE)
 proportions(table(edges$MA_gain_pusd_bt < 1))
+proportions(table(edges$MA_gain_pusd_bt < 2))
+
 
 # <Figure 30: RHS (Top)>
 tfm(edges_real) <- qDT(edges) |> select(-geometry)
@@ -1061,7 +1064,7 @@ tm_basemap("CartoDB.Positron", zoom = 6) +
            col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.1, 0.2, 0.5, 1, 2, 5, Inf)),
            col.legend = tm_legend(expression(Delta~"MA/USD"),
                                   position = c("right", "bottom"), frame = FALSE, 
-                                  text.size = 1.5, title.size = 2), lwd = 2) + 
+                                  text.size = 1.25, title.size = 1.7), lwd = 2) + 
   tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
   tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
   tm_layout(frame = FALSE)
@@ -1072,6 +1075,7 @@ settfm(edges, MA_gain_pusd_bt_opt = perch_to_diff(MA_100_min_speed_bt_opt, MA_10
 descr(edges$MA_gain_pusd_bt_opt)
 # edges$MA_gain_pusd_bt_opt |> replace_na(0, set = TRUE)
 proportions(table(edges$MA_gain_pusd_bt_opt < 1))
+proportions(table(edges$MA_gain_pusd_bt_opt < 2))
 
 # <Figure 30: LHS (Bottom)>
 tfm(edges_real) <- qDT(edges) |> select(-geometry)
@@ -1082,7 +1086,7 @@ tm_basemap("CartoDB.Positron", zoom = 6) +
            col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.1, 0.2, 0.5, 1, 2, 5, Inf)),
            col.legend = tm_legend(expression(Delta~"MA/USD"),
                                   position = c("right", "bottom"), frame = FALSE, 
-                                  text.size = 1.5, title.size = 2), lwd = 2) + 
+                                  text.size = 1.25, title.size = 1.7), lwd = 2) + 
   tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
   tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
   tm_layout(frame = FALSE)
@@ -1090,7 +1094,7 @@ dev.off()
 
 # Consensus Package
 settfm(edges, 
-       consensus = MA_gain_pusd > 1 & (MA_gain_pusd_bt > 1 | MA_gain_pusd_bt_opt > 1), 
+       consensus = is.finite(MA_gain_pusd) & (MA_gain_pusd > 1 & (MA_gain_pusd_bt > 1 | MA_gain_pusd_bt_opt > 1)), 
        MA_gain_pusd_cons = pmean(MA_gain_pusd, MA_gain_pusd_bt, MA_gain_pusd_bt_opt))
 
 # <Figure 30: RHS (Bottom)>
@@ -1103,7 +1107,7 @@ tm_basemap("CartoDB.Positron", zoom = 6) +
            col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.1, 0.2, 0.5, 1, 2, 5, Inf)),
            col.legend = tm_legend(expression(Delta~"MA/USD"),
                                   position = c("right", "bottom"), frame = FALSE, 
-                                  text.size = 1.5, title.size = 2), lwd = 2) + 
+                                  text.size = 1.25, title.size = 1.7), lwd = 2) + 
   tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
   tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
   tm_layout(frame = FALSE)
@@ -1114,7 +1118,8 @@ nrow(subset(edges, consensus)) / nrow(edges)
 subset(edges, consensus) |> with(sum(ug_cost_km * distance / 1000)) |> divide_by(1e9)
 
 net_imp_cons <- as_sfnetwork(rbind(subset(edges, !consensus, duration, total_time), 
-                                   subset(edges, consensus, duration = duration_imp, total_time = total_time_imp)), directed = FALSE)
+                                   subset(edges, consensus, duration = duration_imp, total_time = total_time_imp)), 
+                             directed = FALSE)
 plot(net_imp_cons)
 ind_imp_cons <- ckmatch(nodes_coord, mctl(st_coordinates(st_geometry(net_imp_cons, "nodes"))))
 identical(st_distance(st_geometry(net_imp_cons, "nodes"))[ind_imp_cons, ind_imp_cons], sp_distances)
@@ -1127,7 +1132,6 @@ mean(times_imp_bt_cons / times_imp_cons, na.rm = TRUE)
 
 # Total gain
 MA_imp_cons <- total_MA(times_imp_cons, nodes$gdp)
-
 MA_imp_cons / MA
 
 ma_gain_per_min_cons <- MA_imp_cons - MA
@@ -1162,7 +1166,7 @@ tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_lines(col = "cost_km", 
            col.scale = tm_scale_continuous(7, values = "turbo"), 
            col.legend = tm_legend("USD'15/km", position = c("right", "bottom"), frame = FALSE, 
-                                  text.size = 1.5, title.size = 2), lwd = 2) + 
+                                  text.size = 1.25, title.size = 1.7), lwd = 2) + 
   tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
   tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
   tm_layout(frame = FALSE)
@@ -1220,20 +1224,28 @@ for (v in .c(pusd, pusd_bt, pusd_bt_opt)) {
             col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.1, 0.2, 0.5, 1, 2, 5, Inf)),
             col.legend = tm_legend(expression(Delta~"MA/USD"),
                                     position = c("right", "bottom"), frame = FALSE, 
-                                    text.size = 1.5, title.size = 2), lwd = 2) + 
+                                    text.size = 1.25, title.size = 1.7), lwd = 2) + 
     tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
     tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
     tm_layout(frame = FALSE)
   dev.off()
 }; rm(v)
 
+# Need again without real links:
+all_cb_ratios_se <- rbind(edges |> select(MA_gain_pusd, MA_gain_pusd_bt, MA_gain_pusd_bt_opt),
+                          add_links |> select(MA_gain_100kmh_pusd, MA_gain_100kmh_pusd_bt, MA_gain_100kmh_pusd_bt_opt) |> rm_stub("100kmh_", regex = TRUE))
+tfm(all_cb_ratios_se) <- all_costs |> atomic_elem()
+descr(all_cb_ratios_se)
+
+
 for (i in c(0.5, 1, 2)) {
   cat("MA Gain greatern than ", i, fill = TRUE)
 
 # Consensus Package
 settfm(all_cb_ratios, 
-       consensus = MA_gain_pusd > i & (MA_gain_pusd_bt > i | MA_gain_pusd_bt_opt > i), # 1, 2, or 4
+       consensus = is.finite(MA_gain_pusd) & (MA_gain_pusd > i & (MA_gain_pusd_bt > i | MA_gain_pusd_bt_opt > i)), # 1, 2, or 4
        MA_gain_pusd_cons = pmean(MA_gain_pusd, MA_gain_pusd_bt, MA_gain_pusd_bt_opt))
+tfm(all_cb_ratios_se) <- atomic_elem(all_cb_ratios)
 
 # <Figure 32: Last 3 Plots>
 pdf(sprintf("figures/PE/trans_CEMAC_network_MA_gain_all_100kmh_pusd_cons_MAg%g.pdf", i), width = 6.5, height = 8)
@@ -1243,42 +1255,45 @@ tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_lines(col = "MA_gain_pusd_cons", 
            col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.1, 0.2, 0.5, 1, 2, 5, Inf)),
            col.legend = tm_legend(expression(Delta~"MA/USD"), position = c("right", "bottom"), frame = FALSE, 
-                                  text.size = 1.5, title.size = 2), lwd = 2) + 
+                                  text.size = 1.25, title.size = 1.7), lwd = 2) + 
   tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
   tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
   tm_layout(frame = FALSE) 
 dev.off()
 
 # Consensus Gains
-nrow(subset(all_cb_ratios, consensus)) / nrow(all_cb_ratios)
 all_cb_ratios %$% table(type, consensus) |> proportions(1)
+all_cb_ratios %$% table(type, consensus, w = distance) |> # addmargins() |> 
+  t() |> fsum.matrix(TRA = "%")
+sum(subset(all_cb_ratios, consensus)$distance) / sum(all_cb_ratios$distance)
+
 # Cost
 subset(all_cb_ratios, consensus) |> with(sum(cost_km * distance / 1000)) |> divide_by(1e9) |> print()
 
-# net_imp_cons <- as_sfnetwork(rbind(
-#   subset(all_cb_ratios, consensus, duration = duration_imp, total_time = total_time_imp),
-#   subset(all_cb_ratios, !consensus & type == "existing", duration, total_time)), directed = FALSE)
-# 
-# # plot(net_imp_cons)
-# ind_imp_cons <- ckmatch(nodes_coord, mctl(st_coordinates(st_geometry(net_imp_cons, "nodes"))))
-# identical(st_distance(st_geometry(net_imp_cons, "nodes"))[ind_imp_cons, ind_imp_cons], sp_distances)
-# 
-# times_imp_cons <- st_network_cost(net_imp_cons, weights = "duration")[ind_imp_cons, ind_imp_cons]
-# times_imp_bt_cons <- st_network_cost(net_imp_cons, weights = "total_time")[ind_imp_cons, ind_imp_cons]
-# # Again adjust frictions scenario. Default: cumulative frictions.
-# # times_imp_bt_cons <- times_imp_cons + btt_nodes
-# sum(times_imp_bt_cons) / sum(times_imp_cons)
-# mean(times_imp_bt_cons / times_imp_cons, na.rm = TRUE)
-# 
-# # Total gain
-# MA_imp_cons <- total_MA(times_imp_cons, nodes$gdp) # _bt
-# print(MA_imp_cons / MA)
-# 
-# ma_gain_per_min_cons <- MA_imp_cons - MA
-# 
-# print(ma_gain_per_min_cons / 1e9) # MA gain in billions
-# # MA gain per investment:
-# print(ma_gain_per_min_cons / sum(with(subset(all_cb_ratios, consensus), cost_km * distance / 1000))) 
+net_imp_cons <- as_sfnetwork(rbind(
+  subset(all_cb_ratios_se, consensus, duration = duration_imp, total_time = total_time_imp),
+  subset(all_cb_ratios_se, !consensus & type == "existing", duration, total_time)), directed = FALSE)
+
+# plot(net_imp_cons)
+ind_imp_cons <- ckmatch(nodes_coord, mctl(st_coordinates(st_geometry(net_imp_cons, "nodes"))))
+identical(st_distance(st_geometry(net_imp_cons, "nodes"))[ind_imp_cons, ind_imp_cons], sp_distances)
+
+times_imp_cons <- st_network_cost(net_imp_cons, weights = "duration")[ind_imp_cons, ind_imp_cons]
+times_imp_bt_cons <- st_network_cost(net_imp_cons, weights = "total_time")[ind_imp_cons, ind_imp_cons]
+# Again adjust frictions scenario. Default: cumulative frictions.
+# times_imp_bt_cons <- times_imp_cons + btt_nodes
+sum(times_imp_bt_cons) / sum(times_imp_cons)
+mean(times_imp_bt_cons / times_imp_cons, na.rm = TRUE)
+
+# Total gain
+MA_imp_cons <- total_MA(times_imp_cons, nodes$gdp) # _bt
+print(MA_imp_cons / MA) # _bt
+
+ma_gain_per_min_cons <- MA_imp_cons - MA # _bt
+
+print(ma_gain_per_min_cons / 1e9) # MA gain in billions
+# MA gain per investment:
+print(ma_gain_per_min_cons / sum(with(subset(all_cb_ratios, consensus), cost_km * distance / 1000)))
 }
 
 # Macroeconomic Cost-Benefit Analysis (Minimal Required Growth Returns) --------------------------------------------
