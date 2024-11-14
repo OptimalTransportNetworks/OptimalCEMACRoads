@@ -67,7 +67,7 @@ To parameterize the graph, I add the populations of smaller agglomerations withi
   
 \section{Optimal Marginal Network Investments}
 
-This section follows \citet{krantz2024optimal} Section 5 by first examining the returns to proposed new links, then to upgrading existing links, followed by joint scenarios. To limit the scope of exposition, cost-benefit analysis is only done for the joint scenarios. 
+This section follows \citet{krantz2024optimal} Section 5 by first examining the returns to proposed new links, then to upgrading existing links, followed by cost-benefit analysis, including joint scenarios. % To limit the scope of exposition, cost-benefit analysis is only done for the joint scenarios. 
 
 \subsection{Building New Links}
 
@@ -88,7 +88,7 @@ Unweighted NRE Gain (\%) & Gravity Weighted NRE Gain (\%) \\ % Improved US-Grade
  % \vspace{-1mm}
 \end{figure}
 
-Similarly, we can consider total market access (MA) implied by the network, where MA of node $i$ is the sum of the estimated GDP's of all other nodes $j$ divided by their respective road distance along the fastest $i\to j$ route. The total network MA is then the sum of MA across all nodes. The total network MA is 23.1 billion USD'15 per km. Building all proposed links increases MA by 5.2\%. Under 2019 border frictions as in \citet{krantz2024optimal}, the MA gain from all proposed links drops to 3\%. Figure \ref{fig:MA_DA_TAN} shows total MA gains from building each link with and without frictions. Ostensibly, frictions reduce the value of new border-crossing links. In fact the marginal gains from all links are lower under frictions as long as the route is fixed and transiting is less costly.  \citet{krantz2024optimal} discusses other cases which I refrain from here, the focus should not be on the impact of border frictions except to make it clear that they should be removed as much as possible. 
+Similarly, we can consider total market access (MA) implied by the network, where MA of node $i$ is the sum of the estimated GDP's of all other nodes $j$ divided by their respective road distance along the fastest $i\to j$ route. The total network MA is then the sum of MA across all nodes. The total network MA is 23.1 billion USD'15 per km. Building all proposed links increases MA by 5.2\%. Using 2019 estimates of cross-border frictions from the final edition of the World Bank Doing Business surveys, and translating documentary and border compliance time/cost into road time/distance, respectively, following \citet{krantz2024optimal}, reduces the MA gain from all proposed links to 3\%. Figure \ref{fig:MA_DA_TAN} shows total MA gains from building each link with and without frictions. Ostensibly, frictions reduce the value of new border-crossing links. In fact the marginal gains from all links are lower under frictions as long as the route is fixed and transiting is less costly.  \citet{krantz2024optimal} discusses other cases which I refrain from here, the focus should not be on the impact of border frictions except to make it clear that they should be removed as much as possible. 
 
 
 \begin{figure}[H]  \vspace{-1mm}
@@ -124,6 +124,8 @@ The median link speed of the network is 78.7km/h, ranging from 6.2km/h for the s
 \end{figure}
 
 The total travel-time-denominated MA implied by the network is 31 billion USD'15 per minute. Upgrading all roads to allow travel speeds of 100km/h, raises total MA by 24.3\%. Under border frictions the MA drops to 18.2 billion USD'15, and the gains from upgrading all roads is 22.5\%. Figure \ref{fig:MA_TT} shows the gains from upgrading each link individually. 
+
+% Total MA gains from building at 100km/h and upgrading 30.57% or 9.31 billion USD'15/min
 
 \begin{figure}[H]  \vspace{-1mm}
 \centering
@@ -176,15 +178,72 @@ Figure \ref{fig:CTW} shows the different types of work and their estimated costs
 \begin{tabular}{cc}
 Type of Upgrading Work & Cost Per Km \\
 \includegraphics[width=0.48\textwidth]{"../figures/trans_CEMAC_network_type_of_work.pdf"} &
-\includegraphics[width=0.48\textwidth]{"../figures/trans_CEMAC_network_upgrading_costs.pdf"} \\ [-0.2em]
+\includegraphics[width=0.48\textwidth]{"../figures/trans_CEMAC_network_all_costs.pdf"} \\ [-0.2em]
 \end{tabular}
 % \raggedright
 \scriptsize 
 \emph{Notes:} Figure shows the type of work depending on link speed: links $<$60km/h need upgrading, between 60 and 80km/h need mixed works, and above 80km/h need resurfacing. Links above 100km/h do not need additional work. 
 \end{figure}
 
-Following \citet{krantz2024optimal}, I compute link-level cost-benefit ratios as the gain in MA divided by the cost, yielding estimates denominated in \$/min/\$ or 'dollar per minute per dollar invested'. The economic value if such a metric depends on how increases in MA translate into increases in economic activity.  \citet{donaldson2016railroads} estimates of railroad-induced increases in MA on US land values between 1870 and 1890 suggest that MA translates into economic activity at a rate of 2:1, however, the contemporary African context may be very different. Readers should also note that, particularly in comparison with \citet{krantz2024optimal}, the focus on CEMAC alone yields smaller estimates of MA gains from road projects because locations outside of CEMAC which could benefit from them, including traders transiting through CEMAC, are not considered. 
+Following \citet{krantz2024optimal}, I compute link-level cost-benefit ratios as the gain in MA divided by the cost, yielding estimates denominated in \$/min/\$ or 'dollar per minute per dollar invested'. The economic value if such a metric depends on how increases in MA translate into increases in economic activity.  \citet{donaldson2016railroads} estimates of railroad-induced increases in MA on US land values between 1870 and 1890 suggest that MA translates into economic activity at a rate of 2:1, however, the contemporary African context may be very different. Readers should also note that, particularly in comparison with \citet{krantz2024optimal}, the focus on CEMAC alone yields smaller estimates of MA gains from road projects because locations outside of CEMAC which could benefit from them, including traders transiting through CEMAC, are not considered. \newline 
 
+The average gain from upgrading existing links to allows speeds of 100km/h is 1.02\$/min/\$. This drops to 0.55\$/min/\$ under border frictions. In either case, the \citet{donaldson2016railroads}'s finding would imply that economic gains are at max half of that, thus upgrading all links is not sensible. Only around 23\% of links have gains above 2\$/min/\$ without frictions, indicating medium-term profitability. With frictions only 10.7\% have gains above 2\$/min/\$. \newline 
+
+Figure \ref{fig:MA_PUSD} shows these marginal gains across all links. The yellow and orange links indicate potential medium-term profitability. It is notable that, except for two small segments in the vicinity of Yaounde, no proposed link is medium-term profitable under the frictions scenario. However, without frictions, new links to better connect Equatorial Guinea are medium-term profitable. 
+
+\begin{figure}[H]  \vspace{-1mm}
+\centering
+\caption{\label{fig:MA_PUSD} Investment Returns in \$/min/\$ from Building/Upgrading Each Link to $\geq$100km/h}
+\vspace{2mm}
+\begin{tabular}{cc}
+No Frictions & 2019 Doing Business Frictions \\
+\includegraphics[width=0.48\textwidth]{"../figures/PE/trans_CEMAC_network_MA_gain_all_100kmh_pusd.pdf"} &
+\includegraphics[width=0.48\textwidth]{"../figures/PE/trans_CEMAC_network_MA_gain_all_100kmh_pusd_bt.pdf"}  \\ [-0.2em]
+\end{tabular}
+\raggedright
+\scriptsize 
+\emph{Notes:} Figure shows marginal returns in \$/min/\$ (dollar per minute $=$ MA per dollar invested) from upgrading a link to allow travel speeds of $\geq$100km/h or building a new link. New links, indicated as straight lines, are assumed to be 1.208x longer than their geodesic distance $\to$ the inverse of the average route efficiency of 0.828 across existing links in the region.  
+ % \vspace{-2mm}
+\end{figure}
+
+
+A good policy is thus to build/upgrade high-yield links along with lesser yield links for guaranteed positive returns. For example taking all links with a marginal return above 0.5\$/min/\$ with or without border frictions, the average return of which is shown on the LHS of Figure \ref{fig:UG_cons}. It includes 20.9\% of the length of all existing network and 3.8\% of all proposed link lengths. Building/upgrading these costs 1.72 billion USD'15 and yields a 17.1\% MA gain, amounting to 5.2 billion USD'15/min or 3.02\$/min/\$. Under frictions the MA gain drops to 3.82 billion USD'15/min or 2.21\$/min/\$. This package may be profitable if we are optimistic about project costs and/or frictions being reduced (or potentially already much lower than in 2019). \newline 
+
+A More prudent package would consider all links with a marginal return above 1\$/min/\$ with or without border frictions, the average return of which is shown on the RHS of Figure \ref{fig:UG_cons}. It includes 13.8\% of the length of all existing network and 1.65\% of all proposed link lengths. Building/upgrading these costs 1.04 billion USD'15 and yields a 14.3\% frictionless MA gain, amounting to 4.3 billion USD'15/min or 4.16\$/min/\$. Under frictions the MA gain drops to 3.38 billion USD'15/min or 3.24\$/min/\$. 
+
+ % This package may be profitable if we are optimistic about frictions being reduced, or potentially already much lower than in 2019.
+
+% yields a joint MA gain (after recalculating all shortest paths) of 12.9\% without frictions, amounting to \$3.91 billion or 4.25\$/min/\$. Under border frictions, the MA gain drops to \$2.97 billion or 3.22\$/min/\$. 
+
+\begin{figure}[H] \vspace{-1mm}
+\centering
+\caption{\label{fig:UG_cons} Consensus Packages: High-Yield Links with or without Frictions}
+\vspace{2mm}
+\begin{tabular}{cc}
+All links $>$0.5\$/min/\$ & All links $>$1\$/min/\$ \\
+% \includegraphics[width=0.48\textwidth]{"../figures/PE/trans_CEMAC_network_MA_gain_100_min_speed_pusd_cons.pdf"} &
+\includegraphics[width=0.48\textwidth]{"../figures/PE/trans_CEMAC_network_MA_gain_all_100kmh_pusd_cons_MAg0.5.pdf"} &
+\includegraphics[width=0.48\textwidth]{"../figures/PE/trans_CEMAC_network_MA_gain_all_100kmh_pusd_cons_MAg1.pdf"} 
+% \includegraphics[width=0.48\textwidth]{"../figures/trans_CEMAC_network_upgrading_costs.pdf"} \\ [-0.2em]
+\end{tabular}
+% \raggedright
+\scriptsize 
+\emph{Notes:} Figure shows the average marginal returns to building/upgrading selected links across the frictions and no frictions scenarios. These links have marginal gains above the threshold value with and without border frictions.  
+\end{figure}
+
+We could also take only high-yields above 2\$/min/\$ marginal gains, indicated in orange or red in Figure \ref{fig:UG_cons}. This includes only 6.6\% of the length of all existing network and 1.04\% of all proposed link lengths. Building/upgrading these costs 0.54 billion USD'15 and yields a 10.5\% frictionless MA gain, amounting to 3.2 billion USD'15/min or 6\$/min/\$. Under frictions the MA gain drops to 2.62 billion USD'15/min or 4.89\$/min/\$. \newline 
+
+In the absence of frictions, significantly larger investment packages (e.g., all light green and orange/red links in the LHS of Figure \ref{fig:MA_PUSD}) are potentially profitable. To make a realistic assessment, more accurate information about border frictions and economic returns to MA in the region are needed. MA maximization is also not a redistributional development policy, but planners may have legitimate redistributional objectives and clear budget constraints. The condition of roads and their upgrading costs may also not be accurately captured by routing engines and calibrated remote sensing estimates following \citet{collier2016cost} and \citet{fajgelbaum2020optimal}. Thus, knowledge of the region and its road network, and engineering constraints, must also be considered. \newline 
+
+Presumably, such knowledge was applied in the planning of road projects in the region, such as the CD13 project. However, these considerations may have insufficiently accounted for the potential economic gains, and may thus be economically suboptimal or likely to not break even in the medium term. To investigate this, the final part of this section on partial-equilibrium analysis jointly evaluates several road projects in the region using the MA returns framework of this paper.  
+
+
+\subsection{Evaluation of Road Projects in the Region}
+
+
+
+
+\newpage
 
 
 \section{Optimal Network Investments in General Equilibrium}
