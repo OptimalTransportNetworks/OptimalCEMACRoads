@@ -391,9 +391,20 @@ nrow(nodes_coord)
 all.equal(unattrib(nodes_coord), mctl(st_coordinates(nodes)))
 # This can take a few minutes: now generating distance matrix of all nodes
 dist_ttime_mats <- split_large_dist_matrix_gh(nodes_coord, verbose = TRUE)
+dist_ttime_mats_g <- split_large_dist_matrix_google(nodes_coord, verbose = TRUE, quiet = TRUE,
+                                                    key = "")
+# Imputing google matrix
+descr(unattrib(dist_ttime_mats$durations / dist_ttime_mats_g$durations))
+dist_ttime_mats_g$durations[is.na(dist_ttime_mats_g$durations)] <- dist_ttime_mats$durations[is.na(dist_ttime_mats_g$durations)] / 0.7
 
+descr(unattrib(dist_ttime_mats$distances / dist_ttime_mats_g$distances))
+# dist_ttime_mats_g$distances[is.na(dist_ttime_mats_g$distances)] <- dist_ttime_mats$distances[is.na(dist_ttime_mats_g$distances)] / 0.95
+# Better: Adjusted version
+dist_ttime_mats_g$distances <- copyAttrib(dist_ttime_mats$distances / 0.95, dist_ttime_mats_g$distances)
+
+dist_ttime_mats <- dist_ttime_mats_g
 # Checks
-all.equal(dist_ttime_mats$sources, dist_ttime_mats$destinations)
+# all.equal(dist_ttime_mats$sources, dist_ttime_mats$destinations)
 allv(diag(dist_ttime_mats$durations), 0)
 allv(diag(dist_ttime_mats$distances), 0)
 diag(cor(dist_ttime_mats$sources, nodes_coord))
@@ -402,12 +413,13 @@ s2_distance(with(dist_ttime_mats$sources, s2_lnglat(lon, lat)),
 pwcor(unattrib(dist_ttime_mats$distances), unattrib(dist_ttime_mats$durations))
 # Now finding places that are on islands (e.g. Zanzibar City): should not exist here
 if(any(which(fnobs(dist_ttime_mats$durations) < 20))) stop("Found Islands")
+# TODO: Replace with average...
 
-dist_ttime_mats |> qsave("data/transport_network/net_dist_ttime_mats.qs")
+dist_ttime_mats |> qsave("data/transport_network/net_dist_ttime_mats_google_adj.qs")
 
 # Loading again -----------------------------------
 
-dist_ttime_mats <- qread("data/transport_network/net_dist_ttime_mats.qs")
+dist_ttime_mats <- qread("data/transport_network/net_dist_ttime_mats_google_adj.qs")
 
 # Check
 all.equal(st_as_sf(net, "nodes")$geometry, nodes$geometry)
@@ -421,6 +433,8 @@ edges_ind <- edges |> qDF() |> select(from, to) |> qM()
 edges$sp_distance <- st_length(edges)
 edges$distance <- sym_dist_mat[edges_ind]
 edges$duration <- sym_time_mat[edges_ind]
+
+descr(with(edges, (distance / 1000) / (duration / 60^2)))
 
 # Loading, Integrating and Plotting Additional Connections ---------------------------------------------------
 
@@ -494,7 +508,7 @@ sum(nodes$population) / sum(AP24_CEMAC$population)
 
 # First adding info to edges
 tmp <- net |> st_as_sf("edges") |> atomic_elem() |> qDT() |> 
-  join(atomic_elem(edges), overid = 2L) |> 
+  join(atomic_elem(edges), on = c("from", "to", "sp_distance"), overid = 2L, drop.dup.cols = "x") |> 
   select(-from, -to, -.tidygraph_edge_index)
 
 net %<>% activate("edges") %>% dplyr::mutate(tmp)
@@ -503,14 +517,14 @@ rm(tmp)
 save(nodes, edges, edges_ind, nodes_coord, net, add_links, AP24_CEMAC, 
      cities_ports, cities_ports_sf, cities_ports_rsp_sf, 
      dist_ttime_mats, sym_dist_mat, sym_time_mat, 
-     file = "data/transport_network/trans_CEMAC_network.RData")
+     file = "data/transport_network/trans_CEMAC_network_google.RData")
 
 
 ##########################################################
 # Fetching Simplified Routes (Edges) for Visual Inspection
 ##########################################################
 
-load("data/transport_network/trans_CEMAC_network.RData")
+load("data/transport_network/trans_CEMAC_network_google.RData")
 
 # This is the previous Plot
 tm_basemap("Esri.WorldGrayCanvas", zoom = 6) +
@@ -562,9 +576,11 @@ edges_real %<>% rmapshaper::ms_simplify(keep = 0.1)
 edges_real %<>% st_make_valid()
 edges_real |> qsave("data/transport_network/edges_real_simplified.qs")
 
+# Update info
+edges_real <- qread("data/transport_network/edges_real_simplified.qs")
+edges_real %<>% join(atomic_elem(edges), on = c("from", "to"), drop = "x", overid = 2)
 
 # Draw the updated plot
-edges_real <- qread("data/transport_network/edges_real_simplified.qs")
 
 # <Figure 15>
 pdf("figures/trans_CEMAC_network_actual_discretized_gravity_new_roads_real_edges.pdf", width = 7.5, height = 10)
