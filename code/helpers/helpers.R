@@ -168,6 +168,94 @@ split_large_dist_matrix_gh <- function(data, chunk_size = 50, verbose = FALSE, .
   return(res)
 }
 
+split_large_dist_matrix_google <- function(data, chunk_size = 10, verbose = FALSE, ...) {
+  data_m = qM(data)
+  n = nrow(data_m)
+  res_list = list()
+  
+  # Loop over each chunk to compute the pairwise distances and travel times
+  count = 0
+  for (i in seq(1, n, by = chunk_size)) {
+    for (j in seq(1, n, by = chunk_size)) {
+      # Define the row indices for the current chunks
+      rows_i = i:min(i + chunk_size - 1, n)
+      rows_j = j:min(j + chunk_size - 1, n)
+      
+      # Extract the data for the current chunks
+      ds_i = data_m[rows_i, , drop = FALSE]
+      ds_j = data_m[rows_j, , drop = FALSE]
+      
+      if(verbose) {
+        count = count + 1L
+        cat(count," ")
+      }
+      
+      Sys.sleep(1)
+      
+      # Perform the API call for the current chunks
+      r_ij = tryCatch(mapsapi::mp_matrix(ds_i, ds_j, ...), error = function(e) {
+        warning(e)
+        if(!is.matrix(ds_i) || nrow(ds_i) < 1) stop("ds_i is invalid")
+        if(!is.matrix(ds_j) || nrow(ds_j) < 1) stop("ds_j is invalid")
+        Sys.sleep(5)
+        r <- tryCatch(mapsapi::mp_matrix(ds_i, ds_j, ...), error = function(e) NULL)
+        cnt <- 0L
+        while(is.null(r) && cnt < 5L) {
+          cnt <- cnt + 1L
+          Sys.sleep(5)
+          r <- tryCatch(mapsapi::mp_matrix(ds_i, ds_j, ...), error = function(e) NULL)
+        }
+        if(is.null(r)) stop("Not able to fetch result!")
+        return(r)
+      })
+      
+      # Store the result in a list for later combination
+      res_list[[paste(i, j, sep = "_")]] = list(distances = mapsapi::mp_get_matrix(r_ij, value = "distance_m"),
+                                                durations = mapsapi::mp_get_matrix(r_ij, value = "duration_s"))
+    }
+  }
+  
+  # Combine the results from the list into one large matrix for durations and distances
+  res_durations = matrix(NA, n, n)
+  res_distances = matrix(NA, n, n)
+  place_names = character(n)
+  for (i in seq(1, n, by = chunk_size)) {
+    for (j in seq(1, n, by = chunk_size)) {
+      rows_i = i:min(i + chunk_size - 1, n)
+      rows_j = j:min(j + chunk_size - 1, n)
+      
+      # Retrieve the result from the list
+      r_ij = res_list[[paste(i, j, sep = "_")]]
+      
+      # Place the result into the corresponding location in the matrix
+      place_names[rows_i] = rownames(r_ij$durations)
+      res_durations[rows_i, rows_j] = r_ij$durations
+      res_distances[rows_i, rows_j] = r_ij$distances
+    }
+  }
+  
+  place_names = make.unique(place_names)
+  
+  # Create a result list to return
+  res = list(
+    sources = data,
+    place_names = place_names,
+    durations = res_durations,
+    distances = res_distances
+  )
+  
+  rn = rownames(data)
+  if(length(rn) && is.character(rn) && suppressWarnings(!identical(as.integer(rn), seq_along(rn)))) {
+    dimnames(res$durations) <- dimnames(res$distances) <- list(rn, rn)
+  } else if (any(nchar(place_names) > 0)) {
+    rownames(res$sources) <- place_names
+    dimnames(res$durations) <- dimnames(res$distances) <- list(place_names, place_names)
+  }
+  
+  return(res)
+}
+
+
 # Function for deduplication
 largest_within_radius <- function(data, coords = c("lon", "lat"), size = "population", radius_km = 100, 
                                   iter = 5, return_dist = FALSE) {
