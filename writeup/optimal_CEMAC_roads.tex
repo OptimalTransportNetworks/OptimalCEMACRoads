@@ -116,7 +116,7 @@ Unweighted NRE Gain (\%) & Gravity Weighted NRE Gain (\%) \\ % Improved US-Grade
  % \vspace{-1mm}
 \end{figure}
 
-Similarly, we can consider total market access (MA) implied by the network, where MA of node $i$ is the sum of the estimated GDP's of all other nodes $j$ divided by their respective road distance along the fastest $i\to j$ route. The total network MA is then the sum of MA across all nodes. The total network MA is 23.1 billion USD'15 per km. Building all proposed links increases MA by 5.2\%. Using 2019 estimates of cross-border frictions from the final edition of the World Bank Doing Business surveys, and translating documentary and border compliance time/cost into road time/distance, respectively, following \citet{krantz2024optimal}, reduces the MA gain from all proposed links to 3\%. Figure \ref{fig:MA_DA_TAN} shows total MA gains from building each link with and without frictions. Ostensibly, frictions reduce the value of new border-crossing links. In fact, the marginal gains from all links are lower under frictions as long as the route is fixed and transiting is less costly.  \citet{krantz2024optimal} discusses other cases where traders can adjust their multi-country routes to minimize border costs, which I refrain from here as the CEMAC region is small. Following \citet{krantz2024optimal}, I set a 48h transit costs (24h per border) for transiting through 3rd countries. %, the focus should not be on the impact of border frictions except to make it clear that they should be removed as much as possible. 
+Similarly, we can consider total market access (MA) implied by the network, where MA of node $i$ is the sum of the estimated GDP's of all other nodes $j$ divided by their respective road distance along the fastest $i\to j$ route. The total network MA is then the sum of MA across all nodes. The total network MA is 23.1 billion USD'15 per km. Building all proposed links increases MA by 5.2\%. Using 2019 estimates of cross-border frictions from the final edition of the World Bank Doing Business surveys, and translating documentary and border compliance time/cost into road time/distance, respectively, following \citet{krantz2024optimal}, reduces total MA to 16.2 billion USD'15 per km or 30\% smaller. the MA gain from all proposed links reduces to 3\%. Figure \ref{fig:MA_DA_TAN} shows total MA gains from building each link with and without frictions. Ostensibly, frictions reduce the value of new border-crossing links. In fact, the marginal gains from all links are lower under frictions as long as the route is fixed and transiting is less costly.  \citet{krantz2024optimal} discusses other cases where traders can adjust their multi-country routes to minimize border costs, which I refrain from here as the CEMAC region is small. Following \citet{krantz2024optimal}, I set a 48h transit costs (24h per border) for transiting through 3rd countries. %, the focus should not be on the impact of border frictions except to make it clear that they should be removed as much as possible. 
 
 
 \begin{figure}[H]  \vspace{-1mm}
@@ -151,7 +151,7 @@ The median link speed of the network is 78.7km/h, ranging from 6.2km/h for the s
 \emph{Notes:} Figure shows total average speed along each link, according to the Graphhopper routing engine running on OSM. 
 \end{figure}
 
-The total travel-time-denominated MA implied by the network is 31 billion USD'15 per minute. Upgrading all roads to allow travel speeds of 100km/h, raises total MA by 24.3\%. Under border frictions the MA drops to 18.2 billion USD'15, and the gains from upgrading all roads is 22.5\%. Figure \ref{fig:MA_TT} shows the gains from upgrading each link individually. 
+The total travel-time-denominated MA implied by the network is 31 billion USD'15 per minute. Upgrading all roads to allow travel speeds of 100km/h, raises total MA by 24.3\%. Under border frictions the MA drops to 18.2 billion USD'15 per minute or 41.5\% smaller, and the gains from upgrading all roads is 22.5\%. Figure \ref{fig:MA_TT} shows the gains from upgrading each link individually. 
 
 % Total MA gains from building at 100km/h and upgrading 30.57% or 9.31 billion USD'15/min
 
@@ -433,16 +433,59 @@ When planners also have the ability to build new roads alongside upgrading exist
 % \vspace{-10cm}
 \end{figure}
 
+\hphantom{a}
 \newpage
 
-\subsection{Conclusion} 
+\section{Conclusion} 
 
-Analyzing the road network of the CEMAC region and optimal investments into it following the methodology of \citet{krantz2024optimal} yields rich and detailed insights into local and regional investment potentials in partial and general equilibrium. The first general insight is that borders in the region are thick and frictions should be reduced. The road network seems to be of decent quality, except for a few links which need upgrading. Otherwise, resurfacing roads near populated areas in Cameroon (Douala and Yaounde), as well as Brazzaville, Point-Noire, Bangui and N'Djamena, yields high market access (MA) and welfare gains. Much can also be gained from building new links that increase route efficiency. Particularly to mention here is better connecting Equatorial Guinea (Bata) to the north (Kiribi) and south (Libreville), and Libreville to Port-Gentil in Gabon. Planned road projects in the regions such as CD13 manage to shift some traffic to the East around Bangui, and are jointly more effective than individually. They are, however, mostly in remote areas and thus not market access or welfare maximizing. % in light of what could be gained by better connecting populated areas. 
+Analyzing the road network of the CEMAC region and optimal investments into it following the methodology of \citet{krantz2024optimal} yields rich and detailed insights into local and regional investment potentials in partial and general equilibrium. The first general insight is that borders in the region are thick and frictions should duly be reduced. This alone could increase travel time denominated market access (MA) by 71\% and distance-denominated MA by 43\%. The road network seems to be of decent quality, except for a few links which need upgrading. Otherwise, resurfacing roads near populated areas in Cameroon (Douala and Yaounde), as well as Brazzaville, Point-Noire, Bangui and N'Djamena, yields high MA and welfare gains relative to the costs. Much can also be gained from building new links that increase route efficiency. Particularly to mention here is better connecting Equatorial Guinea (Bata) to the north (Kiribi) and south (Libreville), and Libreville to Port-Gentil in Gabon. Planned road projects in the regions such as CD13 manage to shift some traffic to the East around Bangui, and are jointly more effective than individually. They are, however, mostly in remote areas and thus not market access or welfare maximizing. Their short-term economic returns may thus be called into question. High-yield upgrading packages around the aforementioned urban centers on the other hand yield sizeable economic returns in both the short and medium run that are likely to outweigh project costs.  % in light of what could be gained by better connecting populated areas. 
 
 
 \newpage
 
 \bibliographystyle{apacite}
 \bibliography{bibliography} % This links to a file bibliography.bib with the citations
+
+\newpage
+\section*{Appendix}
+
+\begin{figure}[h!] \vspace{-8mm}
+\centering
+\caption{\label{fig:GE_UGNOfrFL} Flow of Goods under Optimal 2B Investments: Upgrading Links}
+\vspace{2mm}
+\begin{tabular}{c}
+Standard Planner \\
+\includegraphics[width=\textwidth]{"../figures/GE/trans_africa_network_GE_20g_2b_fixed_cgc_sigma3.8_rho0_julia_good_flows_4_city.pdf"} \\
+Standard Planner: With Frictions \\
+\includegraphics[width=\textwidth]{"../figures/GE/trans_africa_network_GE_20g_2b_fixed_cgc_sigma3.8_rho0_bc_julia_good_flows_4_city.pdf"} \\
+Inequality Averse Planner \\
+\includegraphics[width=\textwidth]{"../figures/GE/trans_africa_network_GE_20g_2b_fixed_cgc_sigma3.8_rho2_julia_good_flows_4_city.pdf"} \\
+Inequality Averse Planner: With Frictions \\
+\includegraphics[width=\textwidth]{"../figures/GE/trans_africa_network_GE_20g_2b_fixed_cgc_sigma3.8_rho2_bc_julia_good_flows_4_city.pdf"} 
+\end{tabular}
+% \raggedright
+\scriptsize 
+\emph{Notes:} Figure shows the flow of goods from selected cities under optimal 2B upgrading investments on a log scale. \\ \vspace{-20mm}
+\end{figure}
+
+\begin{figure}[h!] \vspace{-4mm}
+\centering
+\caption{\label{fig:GE_BUGNOfrFL} Flow of Goods under Optimal 1B-2B Investments: Building \& Upgrading Links}
+\vspace{2mm}
+\begin{tabular}{c}
+1B Standard Planner \\
+\includegraphics[width=\textwidth]{"../figures/GE/trans_africa_network_GE_add_20g_1b_fixed_cgc_sigma3.8_rho0_julia_good_flows_4_city.pdf"} \\
+1B Standard Planner: With Frictions \\
+\includegraphics[width=\textwidth]{"../figures/GE/trans_africa_network_GE_add_20g_1b_fixed_cgc_sigma3.8_rho0_bc_julia_good_flows_4_city.pdf"} \\
+2B Standard Planner \\
+\includegraphics[width=\textwidth]{"../figures/GE/trans_africa_network_GE_add_20g_2b_fixed_cgc_sigma3.8_rho0_julia_good_flows_4_city.pdf"} \\
+2B Standard Planner: With Frictions \\
+\includegraphics[width=\textwidth]{"../figures/GE/trans_africa_network_GE_20g_2b_fixed_cgc_sigma3.8_rho0_bc_julia_good_flows_4_city.pdf"} \\
+\end{tabular}
+% \raggedright
+\scriptsize 
+\emph{Notes:} Figure shows the flow of goods from selected cities under optimal 1B and 2B road building and upgrading investments on a log scale.
+\end{figure}
+
 
 \end{document}
