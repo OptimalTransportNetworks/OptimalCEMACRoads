@@ -1,5 +1,5 @@
 ###############################################################################
-# Identifying Major Transport Routes (for GE analysis of Trans-African Network)
+# Classify Nodes for GE Network Simulation
 ###############################################################################
 
 library(fastverse)
@@ -7,7 +7,7 @@ set_collapse(mask = c("manip", "helper", "special"))
 fastverse_extend(qs, sf, sfnetworks, tmap, install = TRUE)
 fastverse_conflicts()
 
-load("data/transport_network/trans_CEMAC_network.RData")
+load("data/transport_network/trans_CEMAC_network_google.RData")
 edges_real <- qread("data/transport_network/edges_real_simplified.qs")
 nodes %<>% join(tfm(atomic_elem(cities_ports_rsp_sf), city_port = TRUE), 
                 on = c("city_port", "population", "city_country"), drop = "y", attr = TRUE)
@@ -31,7 +31,7 @@ tm_basemap("CartoDB.Positron", zoom = 6) +
 # 16 largest port-cities
 large_cities <- nodes %$% which(population > 2e5 | outflows > 1e6)
 length(large_cities)
-largest <- nodes$city_country[large_cities]
+(largest <- nodes$city_country[large_cities])
 
 # Fastest Routes between them
 # igraph::all_shortest_paths(net, large_cities[1], large_cities)
@@ -61,7 +61,7 @@ tm_basemap("CartoDB.Positron", zoom = 6) +
 # Classification
 settfm(edges, speed_kmh = (distance / 1000) / (duration / 60^2))
 descr(edges$speed_kmh)
-tfm(edges_real) <- qDT(edges) |> select(-geometry)
+tfm(edges_real) <- atomic_elem(edges) 
 
 settfm(nodes, major_city_port = replace_na(population > 2e5 | outflows > 1e6))
 sum(nodes$major_city_port)
@@ -76,17 +76,17 @@ settfm(nodes, product = nif(major_city_port, NA_integer_, # Heterogeneous produc
 table(nodes$product, na.exclude = FALSE)
 setv(nodes$product, whichNA(nodes$product), seq_along(largest) + 4L)
 # Need to write this to ensure product classification is available for GE simulation !!!!
-nodes_param <- fread("data/transport_network/csv/graph_nodes.csv")
+nodes_param <- fread("data/transport_network/csv/graph_nodes_google.csv")
 nodes_param |> select(lon, lat) |> qM() |> subtract(st_coordinates(nodes)) |> descr() |> print(digits = 7)
 nodes_param$product <- nodes$product
-# nodes_param |> atomic_elem() |> qDT() |> fwrite("data/transport_network/csv/graph_nodes.csv")
+# nodes_param |> atomic_elem() |> qDT() |> fwrite("data/transport_network/csv/graph_nodes_google.csv")
 rm(nodes_param)
 attr(nodes$product, "levels") <- c("Small Town", "City > 50K", "Port", "City > 100K", paste("Major City", seq_along(largest)))
 class(nodes$product) <- "factor"
 
 # Plotting
 # <Figure 41: LHS> (Use nname <- "all_routes" above to generate the RHS)
-pdf("figures/GE/trans_africa_network_reduced_20_products.pdf", width = 7.5, height = 9)
+pdf("figures/GE/trans_africa_network_reduced_20_products_google.pdf", width = 7.5, height = 9)
 tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_shape(subset(edges_real, speed_kmh > 10)) + # Use edges_real to generate <Figure A21>
   tm_lines(col = "speed_kmh", 
@@ -106,8 +106,8 @@ dev.off()
 
 # Plot population and productivity (for GE Calibration) ------------------------------------------------------
 
-graph_nodes <- fread("data/transport_network/csv/graph_nodes.csv") 
-graph_edges <- fread("data/transport_network/csv/graph_orig.csv") 
+graph_nodes <- fread("data/transport_network/csv/graph_nodes_google.csv") 
+graph_edges <- fread("data/transport_network/csv/graph_orig_google.csv") 
 
 # Now: Plotting Productivity
 graph_nodes %<>%
@@ -135,7 +135,7 @@ graph_nodes |> qDT() |>
 edges_real <- qread("data/transport_network/edges_real_simplified.qs")
 
 # <Figure 33>
-pdf("figures/trans_CEMAC_network_GE_parameterization_latest.pdf", width = 9.5, height = 12)
+pdf("figures/trans_CEMAC_network_GE_parameterization_latest_google.pdf", width = 9.5, height = 12)
 tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_shape(mutate(edges_real, speed_kmh = (edges$distance/1000)/(edges$duration/60^2)) |> 
              rowbind(mutate(add_links, speed_kmh = 0), fill = TRUE)) +
@@ -146,7 +146,7 @@ tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_shape(subset(graph_nodes, outflows > 0) |>
              mutate(ofl = round(outflows / 1e6, 1))) + 
   tm_dots(size = "ofl", 
-          size.scale = tm_scale_intervals(5, style = "jenks", values.scale = 2), # 
+          size.scale = tm_scale_intervals(5, style = "jenks", values.scale = 2.5), # 
           size.legend = tm_legend("Port Outflows (M)", position = tm_pos_in(0.57, 0.4), frame = FALSE, text.size = 1.2, title.size = 1.4),
           fill = scales::alpha("black", 0.25)) +
   tm_shape(subset(graph_nodes, population > 0) |> mutate(pop = population / 1000)) + 
