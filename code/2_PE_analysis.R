@@ -1191,7 +1191,7 @@ save(list = ls(TAN_env), file = "data/transport_network/trans_CEMAC_network_para
 # Evaluation Regional Road Projects
 #############################################
 
-# load("data/transport_network/trans_CEMAC_network_param.RData")
+# load("data/transport_network/trans_CEMAC_network_param_google.RData")
 # # ne <- new.env()
 # # load("data/transport_network/trans_CEMAC_network.RData", envir = ne)
 # # identical(edges$from, ne$edges$from)
@@ -1205,12 +1205,19 @@ save(list = ls(TAN_env), file = "data/transport_network/trans_CEMAC_network_para
  
 edges_real <- qread("data/transport_network/edges_real_simplified.qs") |>
   rmapshaper::ms_simplify(keep = 0.1) |> st_make_valid()
+
+list2env(qread("results/transport_network/PE/PE_results_google.qs"), globalenv())
 tfm(edges_real) <- atomic_elem(edges)
+# add_links <- add_links_param
 
 edges_real$from_city <- edges$from_city <- nodes$city_country[edges$from] |> setv(NA, edges$from)
 edges_real$to_city <- edges$to_city <- nodes$city_country[edges$to] |> setv(NA, edges$to)
 add_links$from_city <- nodes$city_country[add_links$from] |> setv(NA, add_links$from)
 add_links$to_city <- nodes$city_country[add_links$to] |> setv(NA, add_links$to)
+
+edges_real |>
+  select(from_city, to_city) |>
+  mapview::mapview()
 
 planned_segments <- matrix(c(
   c("m'baiki - CAF", "bangui - CAF"),
@@ -1237,13 +1244,78 @@ planned_segments <- matrix(c(
   c("4", "Medounou - GAB"),
   c("garoua-boulai - CMR", "baboua - CAF"),
   c("52", "dolisie - COG"),
-  c("ndende - GAB", "52")
+  c("ndende - GAB", "52"),
+# ), ncol = 2, byrow = TRUE) |> qDF() |> 
+#   set_names(c("from_city", "to_city"))
+# 
+# planned_segments_theo_chat <- matrix(c(
+  # Douala -> Bangui
+  c("douala - CMR", "edea - CMR"),
+  c("edea - CMR", "19"),
+  c("19", "eseka - CMR"),
+  c("eseka - CMR", "yaounde - CMR"), # c("yaounde - CMR", "mbalmayo - CMR"),
+  c("yaounde - CMR", "akonolinga - CMR"),
+  c("akonolinga - CMR", "ayos - CMR"),
+  c("ayos - CMR", "85"),
+  c("85", "bertoua - CMR"), # c("bertoua - CMR", "91"),
+  c("bertoua - CMR", "96"),
+  c("96", "garoua-boulai - CMR"),
+  c("garoua-boulai - CMR", "baboua - CAF"),
+  c("baboua - CAF", "125"),
+  c("125", "bouar - CAF"), # c("bouar - CAF", "148"),
+  c("bouar - CAF", "baoro - CAF"),
+  c("baoro - CAF", "binon - CAF"),
+  c("binon - CAF", "160"),
+  c("160", "yaloke - CAF"),
+  c("yaloke - CAF", "bossembele - CAF"),
+  c("bossembele - CAF", "176"),
+  c("176", "bangui - CAF"),
+  
+  # Douala -> N'Djamena
+  c("loum - CMR", "douala - CMR"),
+  c("loum - CMR", "bafoussam - CMR"),
+  c("bafoussam - CMR", "foumban - CMR"),
+  c("foumban - CMR", "bankim - CMR"),
+  c("bankim - CMR", "mayo-darle - CMR"),
+  c("mayo-darle - CMR", "tibati - CMR"),
+  c("tibati - CMR", "ngaoundal - CMR"),
+  c("ngaoundal - CMR", "ngaoundere - CMR"), # c("ngaoundere - CMR", "touboro - CMR"),
+  c("ngaoundere - CMR", "88"),
+  c("garoua - CMR", "88"),
+  c("garoua - CMR", "figuil centre - CMR"),
+  c("maroua - CMR", "figuil centre - CMR"),
+  c("maroua - CMR", "moutourwa - CMR"),
+  c("maroua - CMR", "mora - CMR"),
+  c("mora - CMR", "104"),
+  c("100", "104"),
+  c("100", "ndjamena - TCD"),
+  
+  # Yaounde -> Libreville (Paved, focus on frictions)
+  c("yaounde - CMR", "mbalmayo - CMR"),
+  c("42", "mbalmayo - CMR"),
+  c("ebolowa i - CMR", "42"),
+  c("ebolowa i - CMR", "34"),
+  c("34", "bitam - GAB"),
+  c("mengomeyen - GNQ", "bitam - GAB"),
+  c("mengomeyen - GNQ", "29"),
+  c("29", "oyem - GAB"),
+  c("48", "oyem - GAB"),
+  c("28", "48"),
+  c("Medounou - GAB", "29"),
+  c("4", "Medounou - GAB"),
+  c("libreville - GAB", "4")
+
+  # 3.⁠ ⁠⁠Lebamba-Mbigou : 84Km;
+  # 4.⁠ ⁠⁠Mbigou-Malinga-Mollo : 112 km
+  # -> Unimportant for general navigation!!
+  
 ), ncol = 2, byrow = TRUE) |> qDF() |> 
   set_names(c("from_city", "to_city"))
 
+
 edges$planned <- select(c(edges), from_city, to_city) %in% planned_segments
 
-edges |>
+edges_real |>
   subset(ckmatch(planned_segments, list(from_city, to_city))) |>
   mapview::mapview()
 
@@ -1255,27 +1327,26 @@ costs_million <- c(CD13_P2 = 994.572, KPLB = 110.008, KMA = 426.858,
                    CBB = 79.28, ND = 290.264)
 sum(costs_million)
 
-edges |>
+edges_real_target |>
   subset(ckmatch(planned_segments, list(from_city, to_city))) |>
   with(ug_cost_km * distance / 1000) |>
-  sum() |> divide_by(1e6) |> multiply_by(1.19)
-
-
-sapply(c(Mycost = 288258108, Pcost = sum(costs_million)*1e6), calc_rates, 3.5) |> t() |> round(3)
-sapply(c(Mycost = 288258108, Pcost = sum(costs_million)*1e6), calc_rates, 2) |> t() |> round(3)
+  sum() |> divide_by(1e6) # |> multiply_by(1.19)
 
 
 # 273 million -> very low!! 
 
 # Plotting gains: 
-edges_real_target <- edges_real |> subset(ckmatch(planned_segments, list(from_city, to_city))) |>
+edges_real_target <- edges_real |> 
+  subset(ckmatch(planned_segments, list(from_city, to_city))) |>
   mutate(duration = duration_imp, total_time = total_time_imp)
+
 edges_real_target <- edges_real_target |> rowbind(fill = TRUE,
                                                   subset(add_links, from_city == "m'baiki - CAF" & to_city == "ouesso - COG", 
                                                          MA_100_min_speed_perc = MA_gain_perc, 
                                                          MA_100_min_speed_bt_perc = MA_per_link_100kmh_bt_perc, 
                                                          MA_gain_pusd = MA_gain_100kmh_pusd,
                                                          MA_gain_pusd_bt = MA_gain_100kmh_pusd_bt,
+                                                         distance = distance,
                                                          duration = duration_100kmh,
                                                          total_time = total_time_100kmh,
                                                          geometry))
@@ -1326,6 +1397,7 @@ edges_target <- edges_target |> rowbind(fill = TRUE,
                                                MA_100_min_speed_bt_perc = MA_per_link_100kmh_bt_perc, 
                                                MA_gain_pusd = MA_gain_100kmh_pusd,
                                                MA_gain_pusd_bt = MA_gain_100kmh_pusd_bt,
+                                               distance = distance,
                                                duration = duration_100kmh,
                                                total_time = total_time_100kmh,
                                                ug_cost_km = cost_km, distance,
@@ -1335,6 +1407,7 @@ net_imp_proj <- as_sfnetwork(rbind(subset(edges, !planned, duration, total_time)
                                    select(edges_target, duration, total_time)), 
                              directed = FALSE)
 plot(net_imp_proj)
+nodes_coord <- qDF(st_coordinates(nodes))
 ind_imp_proj <- ckmatch(nodes_coord, mctl(st_coordinates(st_geometry(net_imp_proj, "nodes"))))
 sp_distances <- st_distance(nodes)
 identical(st_distance(st_geometry(net_imp_proj, "nodes"))[ind_imp_proj, ind_imp_proj], sp_distances)
@@ -1346,15 +1419,41 @@ sum(times_imp_bt_proj) / sum(times_imp_proj)
 mean(times_imp_bt_proj / times_imp_proj, na.rm = TRUE)
 
 # Total gain
-net %<>% activate("edges") %>% dplyr::mutate(duration = duration / 60)
-times <- st_network_cost(net, weights = "duration")
-MA <- total_MA(times, nodes_param$gdp)
-MA_imp_proj <- total_MA(times_imp_proj, nodes_param$gdp)
+# all.equal(unattrib(nodes_coord), mctl(st_coordinates(st_geometry(net, "nodes"))))
+net <- as_sfnetwork(edges, directed = FALSE)
+ind <- ckmatch(nodes_coord, mctl(st_coordinates(st_geometry(net, "nodes"))))
+times <- st_network_cost(net, weights = "duration")[ind, ind]
+MA <- total_MA(times, nodes$gdp)
+MA_imp_proj <- total_MA(times_imp_proj, nodes$gdp)
 MA_imp_proj / MA
-sum(edges_real_target$MA_100_min_speed_bt_perc)
+sum(edges_target$MA_100_min_speed_bt_perc)
 
 ma_gain_per_min_proj <- MA_imp_proj - MA
 
 ma_gain_per_min_proj / 1e9 # MA gain in billions
 ma_gain_per_min_proj / sum(with(edges_target, ug_cost_km * distance / 1000)) # MA gain per investment
+
+
+
+# Macroeconomic Cost-Benefit Analysis
+
+edges_target |>
+  subset(ckmatch(planned_segments, list(from_city, to_city))) |>
+  with(ug_cost_km * distance / 1000) |>
+  sum() |> divide_by(1e6) # |> multiply_by(1.19)
+
+
+sapply(c(Mycost = 2487704423, Pcost = sum(costs_million)*1e6), calc_rates, 3.5) |> t() |> round(3)
+
+sapply(c(Mycost = 2487704423, Pcost = sum(costs_million)*1e6), calc_rates, 2) |> t() |> round(3)
+
+
+# Test cost
+tmp = fread("data/transport_network/csv/graph_orig_google.csv")
+tmp %<>% join(select(edges, from, from_city, to, to_city))
+
+tmp |>
+  subset(ckmatch(planned_segments, list(from_city, to_city))) |>
+  with(ug_cost_km * distance / 1000) |>
+  sum() |> divide_by(1e6) # |> multiply_by(1.19)
 
