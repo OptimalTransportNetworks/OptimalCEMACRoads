@@ -8,6 +8,9 @@ fastverse_extend(qs, sf, units, sfnetworks, tmap, install = TRUE)
 source("code/helpers/helpers.R")
 fastverse_conflicts()
 
+GADM0_africa <- qread("data/other_inputs/GADM0_africa_simplified.qs")
+CEMAC <- africamonitor::am_countries$ISO3[africamonitor::am_entities$CEMAC]
+
 # All essential objects from previous sections
 # Need only load("data/transport_network/trans_CEMAC_network.RData"), the result of 1_get_transport_network.R
 # The .RData file with the _param suffix is created at the end of this file and adds a 'parameterized' version 
@@ -130,10 +133,31 @@ dev.off()
 
 # Matching to IWI, and choosing distance-weighted nearest cell value within 10km
 IWI <- qread("/Users/sebastiankrantz/Documents/IFW Kiel/Africa-Infrastructure/data/intermediate/other/IWI.qs")
+
+IWI_grid <- IWI |>
+  # subset(countrycode::countryname(country_name, "iso3c") %iin% c(CEMAC, "NGA", "COD")) |>
+  transform(round_to_kms_fast(lon, lat, 10)) |>
+  group_by(lon, lat) |>
+  select(IWI) |> fmean() |>
+  st_as_sf(coords = c("lon", "lat"), crs = 4326) 
+
+# Only in CEMAC
+IWI_grid %<>% subset(vlengths(st_within(IWI_grid, base::subset(GADM0_africa, GID_0 %in% CEMAC))) > 0)
+
+pdf("figures/IWI_CEMAC_GRID.pdf", width = 6.5, height = 8)
+tm_basemap("CartoDB.Positron", zoom = 6) +
+  tm_shape(edges_real) + tm_lines(col = "grey30") + 
+  tm_shape(IWI_grid) + 
+  tm_symbols(fill = "IWI", size = 0.235, shape = 15, fill_alpha = 0.6, # ?points
+             fill.scale = tm_scale_intervals(7, style = "fisher", values = "inferno"),
+             fill.legend = tm_legend("IWI", position = c("right", "bottom"), frame = FALSE, 
+                                     text.size = 1.4, title.size = 1.4)) + 
+  tm_layout(frame = FALSE)
+dev.off()
+
 outcomes_coords <- IWI |> select(lon, lat) |> qM()
 nodes_coord_mat <- st_coordinates(nodes) # graph_nodes |> select(lon, lat) |> qM() 
 nodes$N_IWI <- nodes$IWI <- NA_real_
-
 for (i in seq_row(nodes)) {
   d = geodist::geodist(nodes_coord_mat[i, , drop = FALSE], outcomes_coords, measure = "haversine") 
   ind = which(d < 10e3)
@@ -145,8 +169,18 @@ settfm(nodes, wealth = IWI * population)
 rm(d, ind, w, nodes_coord_mat, outcomes_coords, IWI); gc()
 fndistinct(atomic_elem(nodes))
 
+pdf("figures/trans_CEMAC_network_IWI.pdf", width = 6.5, height = 8)
+tm_basemap("CartoDB.Positron", zoom = 6) +
+  tm_shape(edges_real) + tm_lines(col = "grey30") + 
+  tm_shape(nodes) + 
+  tm_dots(fill = "IWI", size = 0.4,
+          fill.scale = tm_scale_intervals(7, style = "pretty", values = "inferno"),
+          fill.legend = tm_legend("Productivity (IWI)", position = c("right", "bottom"), frame = FALSE, 
+                                  text.size = 1.4, title.size = 1.6)) + 
+  tm_layout(frame = FALSE)
+dev.off()
+
 # Creating GDP variable based on wealth index 
-CEMAC <- africamonitor::am_countries$ISO3[africamonitor::am_entities$CEMAC]
 CEMAC_GDP <- africamonitor::am_data(ctry = CEMAC, series = c("NY_GDP_MKTP_KD", "SP_POP_TOTL"), 
                                     expand.date = TRUE, gen = "Year", keep.date = FALSE) |>
              group_by(year = Year) |> 
@@ -159,9 +193,234 @@ fsum(nodes$population) / fsum(AP24_CEMAC$population)
 # 45% of total CEMAC population
 fsum(nodes$population) / CEMAC_GDP[year == max(year), population]
 # Now scaling
-nodes$gdp = proportions(nodes$wealth) * 0.8 * 90889016753 # CEMAC_GDP[year == max(year), gdp] # Assume 80% of GDP (big cities are more productive)
+nodes$gdp_other = proportions(nodes$wealth) * 0.8 * 90889016753 # CEMAC_GDP[year == max(year), gdp] # Assume 80% of GDP (big cities are more productive)
 
-# Computing total market access
+pdf("figures/trans_CEMAC_network_GDP_other.pdf", width = 6.5, height = 8)
+tm_basemap("CartoDB.Positron", zoom = 6) +
+  tm_shape(edges_real) + tm_lines(col = "grey30") + 
+  tm_shape(mutate(nodes, gdp_b = gdp_other / 1e9)) + 
+  tm_dots(fill = "gdp_b", size = 0.4,
+          fill.scale = tm_scale_intervals(7, style = "fisher", values = "inferno"),
+          fill.legend = tm_legend("Other Prod. ($'15B)", position = c("right", "bottom"), frame = FALSE, 
+                                  text.size = 1.4, title.size = 1.6)) + 
+  tm_layout(frame = FALSE)
+dev.off()
+
+# Using Crop Production Instead ----------------------------------------------------
+
+# load("data/transport_network/trans_CEMAC_network_param_google.RData")
+# nodes <- nodes_param
+# edges <- edges_param
+# add_links <- add_links_param
+# rm(nodes_param, edges_param, add_links_param)
+
+SPAM <- fread("/Users/sebastiankrantz/Documents/Data/SPAM2020/Global_CSV/spam2020V1r0_global_production/spam2020V1r0_global_P_TA.csv")
+SPAM[["TOTAL"]] <- SPAM |> select(BANA_A:YAMS_A) |> psum()
+fndistinct(SPAM)
+SPAM_CEMAC <- SPAM |> subset(countrycode::countryname(ADM0_NAME, "iso3c") %iin% CEMAC)
+SPAM %<>% select(-(BANA_A:YAMS_A))
+# Focus on top 11 crops (80% of production) -> Improve crop production through transportation
+TOP80_crops <- SPAM_CEMAC |> select(BANA_A:YAMS_A) |> fsum() |> proportions() |> 
+  sort(decreasing = TRUE) |> cumsum() |> is_less_than(0.8) |> which() |> names()
+SPAM_CEMAC[["TOP80"]] <- SPAM_CEMAC |> get_vars(TOP80_crops) |> psum()
+SPAM_CEMAC %<>% select(-(BANA_A:YAMS_A))
+gc()
+
+
+tfm(edges_real) <- atomic_elem(edges)
+for (v in c("TOTAL", "TOP80")) {
+  pdf(sprintf("figures/SPAM_CEMAC_%s.pdf", v), width = 6.5, height = 8)
+  print(tm_basemap("CartoDB.Positron", zoom = 6) +
+    tm_shape(edges_real) + tm_lines(col = "grey30") + 
+    tm_shape(SPAM_CEMAC |>
+      st_as_sf(coords = c("x", "y"), crs = 4326) |>
+      tfmv(v, `/`, 1e3)) +
+    tm_symbols(fill = v, size = 0.217, shape = 15, fill_alpha = 0.7, # ?points
+            fill.scale = tm_scale_intervals(7, style = "fisher", values = "inferno"),
+            fill.legend = tm_legend("Crop Production (GT)", position = c("right", "bottom"), frame = FALSE, 
+                                    text.size = 1.4, title.size = 1.6)) + 
+    tm_layout(frame = FALSE))
+  dev.off()
+}
+
+st_distance(nodes) %>% extract(lower.tri(.)) %>% quantile(c(0, 0.001, 0.01, 0.025))
+
+outcomes_coords <- SPAM_CEMAC |> select(x, y) |> qM()
+nodes_coord_mat <- st_coordinates(nodes) # graph_nodes |> select(lon, lat) |> qM() 
+nodes$N_SPAM <- nodes$SPAM_TOTAL <- nodes$SPAM_TOP80 <- NA_real_
+for (i in seq_row(nodes)) {
+  d = geodist::geodist(nodes_coord_mat[i, , drop = FALSE], outcomes_coords, measure = "haversine") 
+  ind = which(d < 50e3)
+  w = 1 - d[ind] / 50e3
+  nodes$SPAM_TOTAL[i] = if(length(ind)) fsum.default(SPAM_CEMAC$TOTAL[ind], w = w) else 0
+  nodes$SPAM_TOP80[i] = if(length(ind)) fsum.default(SPAM_CEMAC$TOP80[ind], w = w) else 0
+  nodes$N_SPAM[i] = length(ind)
+}
+rm(d, ind, w, nodes_coord_mat, outcomes_coords, SPAM); gc()
+fndistinct(atomic_elem(nodes))
+
+for (v in c("SPAM_TOTAL", "SPAM_TOP80")) {
+  pdf(sprintf("figures/trans_CEMAC_network_%s.pdf", v), width = 6.5, height = 8)
+  print(tm_basemap("CartoDB.Positron", zoom = 6) +
+    tm_shape(edges_real) + tm_lines(col = "grey30") + 
+    tm_shape(tfmv(nodes, v, `/`, 1e3)) + 
+    tm_dots(fill = v, size = 0.4,
+            fill.scale = tm_scale_intervals(7, style = "fisher", values = "inferno"),
+            fill.legend = tm_legend("Crop Production (GT)", position = c("right", "bottom"), frame = FALSE, 
+                                    text.size = 1.4, title.size = 1.6)) + 
+    tm_layout(frame = FALSE))
+  dev.off()
+}
+
+# Conflict (ACLED) -----------------------------------------------------------------
+
+ACLED <- fread("/Users/sebastiankrantz/Documents/Data/ACLED/Africa_1997-2024_Nov22.csv")
+settfm(ACLED, iso3c = countrycode::countryname(country, "iso3c"))
+ACLED %<>% subset(iso3c %in% c(CEMAC, "NGA", "COD") & year >= 2018) 
+
+ACLED_grid <- ACLED |>
+  transform(round_to_kms_fast(longitude, latitude, 10)) |>
+  group_by(lon, lat) |>
+  compute(sqrt_fatalities = sqrt(fatalities), keep = "fatalities") |> fsum() |>
+  st_as_sf(coords = c("lon", "lat"), crs = 4326)
+
+pdf("figures/ACLED_CEMAC_FATALITIES.pdf", width = 6.5, height = 8)
+tm_basemap("CartoDB.Positron", zoom = 6) +
+  tm_shape(edges_real) + tm_lines(col = "grey30") + 
+  tm_shape(ACLED_grid) + 
+  tm_symbols(fill = "sqrt_fatalities", size = 0.235, shape = 15, fill_alpha = 0.7, # ?points
+             fill.scale = tm_scale_intervals(7, style = "fisher", values = "inferno"),
+             fill.legend = tm_legend(expression(sum(sqrt("ACLED Fatalities"))), position = c("right", "bottom"), frame = FALSE, 
+                                     text.size = 1.4, title.size = 1.4)) + 
+  tm_layout(frame = FALSE)
+dev.off()
+
+outcomes_coords <- ACLED |> select(longitude, latitude) |> qM()
+nodes_coord_mat <- st_coordinates(nodes) # graph_nodes |> select(lon, lat) |> qM() 
+nodes$N_ACLED <- nodes$ACLED_fatalities_sqrt <- NA_real_
+for (i in seq_row(nodes)) {
+  d = geodist::geodist(nodes_coord_mat[i, , drop = FALSE], outcomes_coords, measure = "haversine") 
+  ind = which(d < 50e3)
+  w = 1 - d[ind] / 50e3
+  nodes$ACLED_fatalities_sqrt[i] = if(length(ind)) fsum.default(sqrt(ACLED$fatalities[ind]), w = w) else 0
+  nodes$N_ACLED[i] = length(ind)
+}
+fndistinct(atomic_elem(nodes))
+
+pdf("figures/trans_CEMAC_network_ACLED.pdf", width = 6.5, height = 8)
+tm_basemap("CartoDB.Positron", zoom = 6) +
+  tm_shape(edges_real) + tm_lines(col = "grey30") + 
+  tm_shape(nodes) + 
+  tm_dots(fill = "ACLED_fatalities_sqrt", size = 0.4,
+          fill.scale = tm_scale_intervals(7, style = "fisher", values = "inferno"),
+          fill.legend = tm_legend(expression(sum(sqrt("ACLED Fatalities"))), position = c("right", "bottom"), frame = FALSE, 
+                                  text.size = 1.4, title.size = 1.6)) + 
+  tm_layout(frame = FALSE)
+dev.off()
+
+# Putting conflict into edges as cost estimates...
+edges_real$N_ACLED <- edges_real$ACLED_fatalities_sqrt <- NA_real_
+dmat <- unclass(st_distance(edges_real, st_as_sf(ACLED, coords = c("longitude", "latitude"), crs = 4326)))
+for (i in seq_row(edges_real)) {
+  ind = which(dmat[i, ] < 50e3)
+  w = 1 - dmat[i, ind] / 50e3
+  edges_real$ACLED_fatalities_sqrt[i] = if(length(ind)) fsum.default(sqrt(ACLED$fatalities[ind]), w = w) else 0
+  edges_real$N_ACLED[i] = length(ind)
+}
+tfm(edges) <- edges_real |> qDF() |> gvr("ACLED")
+fndistinct(atomic_elem(edges))
+
+pdf("figures/trans_CEMAC_network_ACLED_edges.pdf", width = 6.5, height = 8)
+tm_basemap("CartoDB.Positron", zoom = 6) +
+  tm_shape(edges_real) + 
+  tm_lines(col = "ACLED_fatalities_sqrt", lwd = 2,
+           col.scale = tm_scale_intervals(7, style = "fisher", values = "inferno"),
+           col.legend = tm_legend(expression(sum(sqrt("ACLED Fatalities"))), position = c("right", "bottom"), frame = FALSE, 
+                                  text.size = 1.4, title.size = 1.6)) + 
+  tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
+  tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
+  tm_layout(frame = FALSE)
+dev.off()
+
+add_links$N_ACLED <- add_links$ACLED_fatalities_sqrt <- NA_real_
+dmat <- unclass(st_distance(add_links, st_as_sf(ACLED, coords = c("longitude", "latitude"), crs = 4326)))
+for (i in seq_row(add_links)) {
+  ind = which(dmat[i, ] < 50e3)
+  w = 1 - dmat[i, ind] / 50e3
+  add_links$ACLED_fatalities_sqrt[i] = if(length(ind)) fsum.default(sqrt(ACLED$fatalities[ind]), w = w) else 0
+  add_links$N_ACLED[i] = length(ind)
+}
+fndistinct(atomic_elem(add_links))
+
+pdf("figures/trans_CEMAC_network_ACLED_edges_add.pdf", width = 6.5, height = 8)
+tm_basemap("CartoDB.Positron", zoom = 6) +
+  tm_shape(rowbind(select(edges_real, ACLED_fatalities_sqrt), select(add_links, ACLED_fatalities_sqrt))) + 
+  tm_lines(col = "ACLED_fatalities_sqrt", lwd = 2,
+           col.scale = tm_scale_intervals(7, style = "fisher", values = "inferno"),
+           col.legend = tm_legend(expression(sum(sqrt("ACLED Fatalities"))), position = c("right", "bottom"), frame = FALSE, 
+                                  text.size = 1.4, title.size = 1.6)) + 
+  tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
+  tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
+  tm_layout(frame = FALSE)
+dev.off()
+
+rm(d, dmat, ind, w, nodes_coord_mat, outcomes_coords, ACLED_grid); gc()
+
+# Also: Think of roads reducing conflict: Conflict as a kind of market access measures..
+
+# Combine Statistics --------------------------------------------------------------
+
+nodes |>
+  select(gdp_other, SPAM_TOP80) |>
+  descr()
+
+nodes$gdp = nodes$gdp_other + proportions(nodes$SPAM_TOP80) * 0.2 * 90889016753
+all.equal(sum(nodes$gdp), 90889016753) # Check
+
+pdf("figures/trans_CEMAC_network_GDP.pdf", width = 6.5, height = 8)
+tm_basemap("CartoDB.Positron", zoom = 6) +
+  tm_shape(edges_real) + tm_lines(col = "grey30") + 
+  tm_shape(mutate(nodes, gdp_b = gdp / 1e9)) + 
+  tm_dots(fill = "gdp_b", size = 0.4,
+          fill.scale = tm_scale_intervals(7, style = "fisher", values = "inferno"),
+          fill.legend = tm_legend("GDP ($'15B)", position = c("right", "bottom"), frame = FALSE, 
+                                  text.size = 1.4, title.size = 1.6)) + 
+  tm_layout(frame = FALSE)
+dev.off()
+
+# # MISC NOTES
+# # HDI-like measure: GDP should take 75% of the measure, Crop Production 25%
+# 
+# # For each scenario: These are the critical links. 
+# # And also: These are the critical borders: 
+# # Cost associated of those
+# 
+# # -> Additional simulations with CROPs/Conflict and borders
+# 
+# # -> Create a few slides!!! !!
+# # -> Need to start operationalization: use PE to select links (set budget), and then GE to compute the program
+# 
+# edges_real$from_city <- nodes$city_country[edges_real$from]
+# edges_real$to_city <- nodes$city_country[edges_real$to]
+# 
+# edges_real |>
+#   # subset(from_ctry != to_ctry, from_city, to_city) |>
+#   mapview::mapview()
+# 
+# # Which cross-border link are more critical to improve for crop production and GDP
+# # 2 types of Program: corss-border cost + phyical impromvement (separate simulations)
+# # Also give names of borders ...
+# 
+# nodes |> qDT() |>
+#   select(gdp, SPAM_TOTAL, ACLED_fatalities_sqrt) |>
+#   pivot() |>
+#   ggplot(aes(fill = value)) + 
+#     geom_histogram() +
+#     facet_wrap(~variable)
+
+
+# Computing total market access ----------------------------------------------------
+
 (MA_real <- total_MA(dist_ttime_mats$distances, nodes$gdp))
 (MA <- total_MA(distances, nodes$gdp)) # distances^3.8
 
@@ -213,7 +472,6 @@ border_dist_transit <- fread("data/QSE/model_border_dist_mat_transit.csv") |> qM
 border_time_transit <- fread("data/QSE/model_border_time_mat_transit.csv") |> qM(1)
 
 # Adding Country Classification
-GADM0_africa <- qread("data/other_inputs/GADM0_africa_simplified.qs")
 # GADM0_africa <- st_read("/Users/sebastiankrantz/Documents/Data/GADM/gadm_410-levels.gpkg", layer = "ADM_0") %>%
 #   subset(GID_0 %in% africamonitor::am_countries$ISO3) %>% st_make_valid()
 # GADM0_africa %<>% rmapshaper::ms_simplify(keep = 0.2) %>% st_make_valid()
