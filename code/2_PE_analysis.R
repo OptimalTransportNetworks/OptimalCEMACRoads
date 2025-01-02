@@ -154,6 +154,7 @@ tm_basemap("CartoDB.Positron", zoom = 6) +
                                      text.size = 1.4, title.size = 1.4)) + 
   tm_layout(frame = FALSE)
 dev.off()
+# jjj
 
 outcomes_coords <- IWI |> select(lon, lat) |> qM()
 nodes_coord_mat <- st_coordinates(nodes) # graph_nodes |> select(lon, lat) |> qM() 

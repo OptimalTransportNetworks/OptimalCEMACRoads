@@ -1,4 +1,14 @@
 
+# Transform coordinates to cell centroids of a rectilinear square grid of a certain size in kms
+round_to_kms_fast <- function(lon, lat, km, round = TRUE, digits = 6) {
+  degrees = km / (40075.017 / 360)             # Gets the degree-distance of the kms at the equator
+  if(round) div = round(degrees, digits)       # Round to precision
+  res_lat = TRA(lat, div, "-%%") %+=% (div/2)  # This transforms the data to the grid centroid
+  scale_lat = cos(res_lat * pi/180)            # Approx. scale factor based on grid centroid
+  res_lon = setTRA(lon * scale_lat, div, "-%%") %+=% (div/2) %/=% scale_lat  
+  return(list(lon = res_lon, lat = res_lat))
+}
+
 split_large_dist_matrix <- function(data, chunk_size = 100, verbose = FALSE) {
   n = nrow(data)
   res_list = list()
