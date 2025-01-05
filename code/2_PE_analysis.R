@@ -223,13 +223,15 @@ SPAM %<>% select(-(BANA_A:YAMS_A))
 TOP80_crops <- SPAM_CEMAC |> select(BANA_A:YAMS_A) |> fsum() |> proportions() |> 
   sort(decreasing = TRUE) |> cumsum() |> is_less_than(0.8) |> which() |> names()
 SPAM_CEMAC[["TOP80"]] <- SPAM_CEMAC |> get_vars(TOP80_crops) |> psum()
-SPAM_CEMAC %<>% select(-(BANA_A:YAMS_A))
+# SPAM_CEMAC %<>% select(-(BANA_A:YAMS_A))
 gc()
 
 
 tfm(edges_real) <- atomic_elem(edges)
-for (v in c("TOTAL", "TOP80")) {
-  pdf(sprintf("figures/SPAM_CEMAC_%s.pdf", v), width = 6.5, height = 8)
+for (v in c(TOP80_crops, "TOTAL", "TOP80")) {
+  print(v)
+  Sys.sleep(1)
+  pdf(sprintf("figures/crops/SPAM_CEMAC_%s.pdf", v), width = 6.5, height = 8)
   print(tm_basemap("CartoDB.Positron", zoom = 6) +
     tm_shape(edges_real) + tm_lines(col = "grey30") + 
     tm_shape(SPAM_CEMAC |>
@@ -841,7 +843,7 @@ dev.off()
 
 # Computing Times 
 if(!net |> activate("edges") |> tidygraph::as_tibble() |> select(from, to) |> 
-  atomic_elem() |> all.equal(atomic_elem(select(edges, from, to)))) stop("Mismatch") # Check
+   atomic_elem() |> all.equal(atomic_elem(select(edges, from, to)))) stop("Mismatch") # Check
 
 times <- st_network_cost(net, weights = edges$duration)
 edges %<>% mutate(speed_kmh_imp = iif(speed_kmh < 90, 90, speed_kmh),
@@ -876,7 +878,7 @@ descr(edges$MA_90_min_speed_perc)
 tfm(edges_real) <- atomic_elem(edges)
 
 # <Figure 26: A>
-pdf("figures/PE/trans_CEMAC_network_MA_90_min_speed_perc_google.pdf", width = 6.5, height = 8)
+pdf("figures/PE/trans_CEMAC_network_MACR_90_min_speed_perc_google.pdf", width = 6.5, height = 8)
 tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_shape(edges_real) +
   tm_lines(col = "MA_90_min_speed_perc", 
@@ -913,7 +915,7 @@ rm(list = ls()[endsWith(ls(), "_tmp")]); gc()
 btt_nodes <- border_time_transit[nodes$iso3c, nodes$iso3c]
 
 # Computing total real market access
-(MA_real_bt <- total_MA(dist_ttime_mats$durations + btt_nodes, nodes$gdp)) # Original: 1748.128 billion USD/min
+(MA_real_bt <- total_MA(dist_ttime_mats$durations + btt_nodes, nodes$gdp)) 
 (MA_bt <- total_MA(times + btt_nodes, nodes$gdp)) / 1e9 # dist_ttime_mats$durations 
 
 MA_bt / MA * MA_real # Reported increase
@@ -921,7 +923,7 @@ MA_bt / MA * MA_real # Reported increase
 # Total gain
 (MA_imp_bt <- total_MA(times_imp + btt_nodes, nodes$gdp)) / 1e9
 MA_imp_bt / MA * MA_real # Reported 
-MA_imp_bt / MA_bt # 27% gains, vs. 42% without frictions
+MA_imp_bt / MA_bt 
 
 # Needed for later
 ma_gain_per_min_bt <- MA_imp_bt - MA_bt 
@@ -940,7 +942,7 @@ descr(edges$MA_90_min_speed_bt_perc)
 tfm(edges_real) <- atomic_elem(edges)
 
 # <Figure 27: LHS>
-pdf("figures/PE/trans_CEMAC_network_MA_90_min_speed_bt_perc_google.pdf", width = 6.5, height = 8)
+pdf("figures/PE/trans_CEMAC_network_MACR_90_min_speed_bt_perc_google.pdf", width = 6.5, height = 8)
 tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_shape(edges_real) +
   tm_lines(col = "MA_90_min_speed_bt_perc", 
@@ -963,7 +965,7 @@ edges$MA_90_min_speed_bt_ratio |> replace_outliers(c(0, 1), "clip", set = TRUE)
 
 # <Figure 27: RHS>
 tfm(edges_real) <- atomic_elem(edges)
-pdf("figures/PE/trans_CEMAC_network_MA_90_min_speed_bt_ratio_google.pdf", width = 6.5, height = 8)
+pdf("figures/PE/trans_CEMAC_network_MACR_90_min_speed_bt_ratio_google.pdf", width = 6.5, height = 8)
 tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_shape(edges_real) +
   tm_lines(col = "MA_90_min_speed_bt_ratio", 
@@ -981,9 +983,9 @@ settfm(edges, total_time = duration + border_time, total_time_imp = duration_imp
 
 # Link Upgrading Costs ---------------------------------------------------
 
-settfm(edges, upgrade_cat = nif(speed_kmh < 60, "Upgrade", speed_kmh >= 60 & speed_kmh < 80, "Mixed Works", 
-                                speed_kmh >= 80 & speed_kmh <= 90, "Resurfacing", speed_kmh > 90, "Nothing") |> 
-         factor(levels = c("Nothing", "Resurfacing", "Mixed Works", "Upgrade")))
+settfm(edges, upgrade_cat = nif(speed_kmh < 60, "Upgrade: <60km/h", speed_kmh >= 60 & speed_kmh < 80, "Mixed Works: 60-80km/h", 
+                                speed_kmh >= 80 & speed_kmh < 90, "Resurfacing: 80-90km/h", speed_kmh >= 90, "Nothing: >90km/h") |> 
+         factor(levels = c("Nothing: >90km/h", "Resurfacing: 80-90km/h", "Mixed Works: 60-80km/h", "Upgrade: <60km/h")))
 table(edges$upgrade_cat)
 anyNA(edges$upgrade_cat)
 
@@ -996,7 +998,7 @@ tm_basemap("CartoDB.Positron", zoom = 6) +
            col.scale = tm_scale_categorical(values = "turbo"),
            col.legend = tm_legend("Type of Work", 
                                   position = c("right", "bottom"), frame = FALSE, 
-                                  text.size = 1.5, title.size = 2), lwd = 2) + 
+                                  text.size = 1.2, title.size = 1.7), lwd = 2) + 
   tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
   tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
   tm_layout(frame = FALSE)
@@ -1004,18 +1006,18 @@ dev.off()
 
 # Now costing the categories
 descr(with(edges, # subset(edges, upgrade_cat == "Resurfacing"), 
-           exp(log(28.4e3) - 0.11 * (distance > 50e3) + 0.12 * log(rugg) + 0.085 * log(pop_wpop_km2+1)))) 
+           exp(log(28.4e3) - 0.11 * (distance > 50e3) + 0.12 * log(rugg) + 0.085 * log(pop_wpop_km2+1) + 0.1 * log(ACLED_fatalities_sqrt+1)))) 
 descr(with(edges, # subset(edges, upgrade_cat == "Mixed Works"), 
-           exp(log(64.6e3) - 0.11 * (distance > 50e3) + 0.12 * log(rugg) + 0.085 * log(pop_wpop_km2+1)))) 
+           exp(log(64.6e3) - 0.11 * (distance > 50e3) + 0.12 * log(rugg) + 0.085 * log(pop_wpop_km2+1) + 0.1 * log(ACLED_fatalities_sqrt+1)))) 
 descr(with(edges, # subset(edges, upgrade_cat == "Upgrade"), 
-           exp(log(101.6e3) - 0.11 * (distance > 50e3) + 0.12 * log(rugg) + 0.085 * log(pop_wpop_km2+1)))) 
+           exp(log(101.6e3) - 0.11 * (distance > 50e3) + 0.12 * log(rugg) + 0.085 * log(pop_wpop_km2+1) + 0.1 * log(ACLED_fatalities_sqrt+1)))) 
 
 edges %<>%
-  mutate(ug_cost_km = -0.11 * (distance > 50e3) + 0.12 * log(rugg) + 0.085 * log(pop_wpop_km2+1), 
-         ug_cost_km = nif(upgrade_cat == "Resurfacing", clip5perc(exp(ug_cost_km + log(28.4e3))),
-                          upgrade_cat == "Mixed Works", clip5perc(exp(ug_cost_km + log(64.6e3))),
-                          upgrade_cat == "Upgrade", clip5perc(exp(ug_cost_km + log(101.6e3))), 
-                          upgrade_cat == "Nothing", 0)) 
+  mutate(ug_cost_km = -0.11 * (distance > 50e3) + 0.12 * log(rugg) + 0.085 * log(pop_wpop_km2+1) + 0.1 * log(ACLED_fatalities_sqrt+1), 
+         ug_cost_km = nif(upgrade_cat == "Resurfacing: 80-90km/h", clip5perc(exp(ug_cost_km + log(28.4e3))),
+                          upgrade_cat == "Mixed Works: 60-80km/h", clip5perc(exp(ug_cost_km + log(64.6e3))),
+                          upgrade_cat == "Upgrade: <60km/h", clip5perc(exp(ug_cost_km + log(101.6e3))), 
+                          upgrade_cat == "Nothing: >90km/h", 0)) 
 
 descr(edges$ug_cost_km)
 descr(edges, ug_cost_km ~ upgrade_cat)
@@ -1023,7 +1025,7 @@ hist(edges$ug_cost_km, breaks = 80)
 
 # <Figure 29: RHS>
 tfm(edges_real) <- atomic_elem(edges)
-pdf("figures/trans_CEMAC_network_upgrading_costs_google.pdf", width = 6.5, height = 8)
+pdf("figures/trans_CEMAC_network_upgrading_costs_conflict_google.pdf", width = 6.5, height = 8)
 tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_shape(edges_real) +
   tm_lines(col = "ug_cost_km", 
@@ -1060,7 +1062,7 @@ proportions(table(edges$MA_gain_pusd < 2))
 
 # <Figure 30: LHS (Top)>
 tfm(edges_real) <- atomic_elem(edges)
-pdf("figures/PE/trans_CEMAC_network_MA_gain_90_min_speed_pusd_google.pdf", width = 6.5, height = 8)
+pdf("figures/PE/trans_CEMAC_network_MACR_gain_90_min_speed_pusd_google.pdf", width = 6.5, height = 8)
 tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_shape(edges_real) + 
   tm_lines(col = "MA_gain_pusd", 
@@ -1084,7 +1086,7 @@ proportions(table(edges$MA_gain_pusd_bt < 2))
 
 # <Figure 30: RHS (Top)>
 tfm(edges_real) <- atomic_elem(edges)
-pdf("figures/PE/trans_CEMAC_network_MA_gain_90_min_speed_pusd_bt_google.pdf", width = 6.5, height = 8)
+pdf("figures/PE/trans_CEMAC_network_MACR_gain_90_min_speed_pusd_bt_google.pdf", width = 6.5, height = 8)
 tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_shape(edges_real) +
   tm_lines(col = "MA_gain_pusd_bt", 
@@ -1104,7 +1106,7 @@ settfm(edges,
 
 # <Figure 30: RHS (Bottom)>
 tfm(edges_real) <- atomic_elem(edges)
-pdf("figures/PE/trans_CEMAC_network_MA_gain_90_min_speed_pusd_cons_google.pdf", width = 6.5, height = 8)
+pdf("figures/PE/trans_CEMAC_network_MACR_gain_90_min_speed_pusd_cons_google.pdf", width = 6.5, height = 8)
 tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_shape(subset(edges_real, !consensus)) + tm_lines(lwd = 2, col = "grey70") +
   tm_shape(subset(edges_real, consensus, MA_gain_pusd_cons)) +
@@ -1125,7 +1127,7 @@ subset(edges, consensus) |> with(sum(ug_cost_km * distance / 1000)) |> divide_by
 net_imp_cons <- as_sfnetwork(rbind(subset(edges, !consensus, duration, total_time), 
                                    subset(edges, consensus, duration = duration_imp, total_time = total_time_imp)), 
                              directed = FALSE)
-plot(net_imp_cons)
+# plot(net_imp_cons)
 ind_imp_cons <- ckmatch(nodes_coord, mctl(st_coordinates(st_geometry(net_imp_cons, "nodes"))))
 identical(st_distance(st_geometry(net_imp_cons, "nodes"))[ind_imp_cons, ind_imp_cons], sp_distances)
 
@@ -1147,7 +1149,8 @@ ma_gain_per_min_cons / sum(with(subset(edges, consensus), ug_cost_km * distance 
 
 # Cost-Benefit Analysis: Joint Scenarios ---------------------------------------------------
 
-settfm(add_links, total_time_90kmh = duration_90kmh + border_time, total_time_65kmh = duration_65kmh + border_time)
+settfm(add_links, total_time_90kmh = duration_90kmh + border_time, 
+                  total_time_65kmh = duration_65kmh + border_time)
 
 # Plot All Costs
 all_costs <- rowbind(existing = select(edges_real, cost_km = ug_cost_km, distance, duration, duration_imp, border_time, total_time, total_time_imp), 
@@ -1160,11 +1163,11 @@ descr(all_costs$cost_km)
 
 # <Figure 31: LHS>
 hist(all_costs$cost_km / 1000, breaks = 80, xlab = "Cost per Km in Thousands of 2015 USD", main = NULL)
-dev.copy(pdf, "figures/trans_CEMAC_network_all_costs_hist_google.pdf", width = 6.5, height = 8)
+dev.copy(pdf, "figures/trans_CEMAC_network_all_costs_conflict_hist_google.pdf", width = 6.5, height = 8)
 dev.off()
 
 # <Figure 31: RHS>
-pdf("figures/trans_CEMAC_network_all_costs_google.pdf", width = 6.5, height = 8)
+pdf("figures/trans_CEMAC_network_all_costs_conflict_google.pdf", width = 6.5, height = 8)
 tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_shape(all_costs) +
   tm_lines(col = "cost_km", 
@@ -1215,13 +1218,14 @@ settfm(add_links,
 all_cb_ratios <- rbind(edges_real |> select(MA_gain_pusd, MA_gain_pusd_bt), # MA_gain_pusd_bt_opt
                        add_links |> select(MA_gain_90kmh_pusd, MA_gain_90kmh_pusd_bt) |> rm_stub("90kmh_", regex = TRUE)) # MA_gain_90kmh_pusd_bt_opt
 tfm(all_cb_ratios) <- all_costs |> atomic_elem()
+settfm(all_cb_ratios, MA_gain_pusd_bt_ratio = MA_gain_pusd_bt / MA_gain_pusd)
 descr(all_cb_ratios)
 
 for (v in .c(pusd, pusd_bt)) { # pusd_bt_opt
   print(v)
   # <Figure 32: First 3 Plots>
-  pdf(sprintf("figures/PE/trans_CEMAC_network_MA_gain_all_90kmh_%s_google.pdf", v), width = 6.5, height = 8)
-  tm_basemap("CartoDB.Positron", zoom = 6) +
+  pdf(sprintf("figures/PE/trans_CEMAC_network_MACR_gain_all_90kmh_%s_google.pdf", v), width = 6.5, height = 8)
+  print(tm_basemap("CartoDB.Positron", zoom = 6) +
     tm_shape(all_cb_ratios) + 
     tm_lines(col = paste0("MA_gain_", v), 
             col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.1, 0.2, 0.5, 1, 2, 5, Inf)),
@@ -1230,18 +1234,33 @@ for (v in .c(pusd, pusd_bt)) { # pusd_bt_opt
                                     text.size = 1.25, title.size = 1.7), lwd = 2) + 
     tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
     tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
-    tm_layout(frame = FALSE)
+    tm_layout(frame = FALSE))
   dev.off()
 }; rm(v)
 
-# Need again without real links:
+# Ratio: 
+pdf("figures/PE/trans_CEMAC_network_MACR_gain_all_90kmh_pusd_bt_ratio_google.pdf", width = 6.5, height = 8)
+print(tm_basemap("CartoDB.Positron", zoom = 6) +
+        tm_shape(all_cb_ratios) + 
+        tm_lines(col = "MA_gain_pusd_bt_ratio", 
+                 col.scale = tm_scale_intervals(values = "turbo", breaks = seq(0, 1, 0.2)), # breaks = c(0, 0.25, 0.5, 1, 1.5, 2),  # For Ratio
+                 col.legend = tm_legend(expression(Delta~"MA Ratio"), 
+                                        position = c("right", "bottom"), frame = FALSE, 
+                                        text.size = 1.5, title.size = 2), lwd = 2) + 
+        tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
+        tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
+        tm_layout(frame = FALSE))
+dev.off()
+
+
+# Need again without real edges (for total gain evaluation):
 all_cb_ratios_se <- rbind(edges |> select(MA_gain_pusd, MA_gain_pusd_bt), # MA_gain_pusd_bt_opt
                           add_links |> select(MA_gain_90kmh_pusd, MA_gain_90kmh_pusd_bt) |> rm_stub("90kmh_", regex = TRUE)) # MA_gain_90kmh_pusd_bt_opt
 tfm(all_cb_ratios_se) <- all_costs |> atomic_elem()
 descr(all_cb_ratios_se)
 
 
-for (i in c(0.5, 1, 2)) {
+for (i in c(0, 0.5, 1, 2)) {
 cat("MA Gain greatern than ", i, fill = TRUE)
 
 # Consensus Package
@@ -1251,7 +1270,7 @@ settfm(all_cb_ratios,
 tfm(all_cb_ratios_se) <- atomic_elem(all_cb_ratios)
 
 # <Figure 32: Last 3 Plots>
-pdf(sprintf("figures/PE/trans_CEMAC_network_MA_gain_all_90kmh_pusd_cons_MAg%g_google.pdf", i), width = 6.5, height = 8)
+pdf(sprintf("figures/PE/trans_CEMAC_network_MACR_gain_all_90kmh_pusd_cons_nofr_noadd_MAg%g_google.pdf", i), width = 6.5, height = 8)
 tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_shape(subset(all_cb_ratios, !consensus)) + tm_lines(lwd = 2, col = "grey70") +
   tm_shape(subset(all_cb_ratios, consensus, MA_gain_pusd_cons)) +
@@ -1292,20 +1311,120 @@ mean(times_imp_bt_cons / times_imp_cons, na.rm = TRUE)
 MA_imp_cons <- total_MA(times_imp_cons, nodes$gdp) 
 print(MA_imp_cons / MA) 
 ma_gain_per_min_cons <- MA_imp_cons - MA 
+print(ma_gain_per_min_cons / 1e9) # MA gain in billions
+# MA gain per investment:
+print(ma_gain_per_min_cons / sum(with(subset(all_cb_ratios, consensus), cost_km * distance / 1000)))
 
 # Total gain: Frictions
 MA_imp_bt_cons <- total_MA(times_imp_bt_cons, nodes$gdp) 
 print(MA_imp_bt_cons / MA_bt) 
 ma_gain_per_min_cons <- MA_imp_bt_cons - MA_bt
-
 print(ma_gain_per_min_cons / 1e9) # MA gain in billions
 # MA gain per investment:
 print(ma_gain_per_min_cons / sum(with(subset(all_cb_ratios, consensus), cost_km * distance / 1000)))
 }
 
+# Optimizing Border Posts ------------------------------------------------------------------------------------------
+
+# Two Scenarios: 50% or 100% Reduction
+
+edges_real |>
+  subset(from_ctry != to_ctry) |> mapview::mapview()
+
+# Optimizing Agents
+times_bt <- st_network_cost(net, weights = edges$total_time)
+(MA_bt_opt <- total_MA(times_bt, nodes$gdp)) / 1e9
+
+# 50% reduction ++++++++++++++++++++++++++++++++++++++++++++++
+edges$MA_bt_50perc_red <- sapply(seq_row(edges), function(i) {
+  w = copyv(edges$total_time, i, edges$duration[i] + 0.5 * edges$border_time[i], vind1 = TRUE)
+  inv_dur = 1 / unclass(st_network_cost(net, weights = w))
+  diag(inv_dur) = 0 
+  sum(inv_dur %*% nodes$gdp) 
+})
+# Percent increase
+edges$MA_bt_50perc_red_perc <- (edges$MA_bt_50perc_red / MA_bt_opt - 1) * 100
+edges$MA_bt_50perc_red_perc[edges$MA_bt_50perc_red_perc < 1e-5] <- NA
+descr(edges$MA_bt_50perc_red_perc)
+
+tfm(edges_real) <- atomic_elem(edges)
+
+pdf("figures/PE/trans_CEMAC_network_MACR_bt_50perc_red_perc_google.pdf", width = 6.5, height = 8)
+tm_basemap("CartoDB.Positron", zoom = 6) +
+  tm_shape(edges_real) +
+  tm_lines(col = "MA_bt_50perc_red_perc", 
+           col.scale = tm_scale_continuous(6, values = "yl_or_rd", trans = "log1p"),
+           col.legend = tm_legend(expression(Delta~"%"~"MA [GDP/min]"), 
+                                  position = c("right", "bottom"), frame = FALSE, 
+                                  text.size = 1.5, title.size = 1.7), lwd = 2) + 
+  tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
+  tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
+  tm_layout(frame = FALSE)
+dev.off()
+
+
+# 90% reduction to 12 hours ++++++++++++++++++++++++++++++++++++++++++++++
+
+edges$border_time |> unique(sort = TRUE) |> extract(-1) |> median() |> divide_by(60)
+
+edges$MA_bt_90percto12h_red <- sapply(seq_row(edges), function(i) {
+  w = copyv(edges$total_time, i, edges$duration[i] + 12*60, vind1 = TRUE)
+  inv_dur = 1 / unclass(st_network_cost(net, weights = w))
+  diag(inv_dur) = 0 
+  sum(inv_dur %*% nodes$gdp) 
+})
+# Percent increase
+edges$MA_bt_90percto12h_red_perc <- (edges$MA_bt_90percto12h_red / MA_bt_opt - 1) * 100
+edges$MA_bt_90percto12h_red_perc[edges$MA_bt_90percto12h_red_perc < 1e-5] <- NA
+descr(edges$MA_bt_90percto12h_red_perc)
+
+tfm(edges_real) <- atomic_elem(edges)
+
+pdf("figures/PE/trans_CEMAC_network_MACR_bt_90percto12h_red_perc_google.pdf", width = 6.5, height = 8)
+tm_basemap("CartoDB.Positron", zoom = 6) +
+  tm_shape(edges_real) +
+  tm_lines(col = "MA_bt_90percto12h_red_perc", 
+           col.scale = tm_scale_continuous(6, values = "yl_or_rd", trans = "log1p"),
+           col.legend = tm_legend(expression(Delta~"%"~"MA [GDP/min]"), 
+                                  position = c("right", "bottom"), frame = FALSE, 
+                                  text.size = 1.5, title.size = 1.7), lwd = 2) + 
+  tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
+  tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
+  tm_layout(frame = FALSE)
+dev.off()
+
+# 100% reduction ++++++++++++++++++++++++++++++++++++++++++++++
+
+edges$MA_bt_100perc_red <- sapply(seq_row(edges), function(i) {
+  w = copyv(edges$total_time, i, edges$duration[i], vind1 = TRUE)
+  inv_dur = 1 / unclass(st_network_cost(net, weights = w))
+  diag(inv_dur) = 0 
+  sum(inv_dur %*% nodes$gdp) 
+})
+# Percent increase
+edges$MA_bt_100perc_red_perc <- (edges$MA_bt_100perc_red / MA_bt_opt - 1) * 100
+edges$MA_bt_100perc_red_perc[edges$MA_bt_100perc_red_perc < 1e-5] <- NA
+descr(edges$MA_bt_100perc_red_perc)
+
+tfm(edges_real) <- atomic_elem(edges)
+
+pdf("figures/PE/trans_CEMAC_network_MACR_bt_100perc_red_perc_google.pdf", width = 6.5, height = 8)
+tm_basemap("CartoDB.Positron", zoom = 6) +
+  tm_shape(edges_real) +
+  tm_lines(col = "MA_bt_100perc_red_perc", 
+           col.scale = tm_scale_continuous(6, values = "yl_or_rd", trans = "log1p"),
+           col.legend = tm_legend(expression(Delta~"%"~"MA [GDP/min]"), 
+                                  position = c("right", "bottom"), frame = FALSE, 
+                                  text.size = 1.5, title.size = 1.7), lwd = 2) + 
+  tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
+  tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
+  tm_layout(frame = FALSE)
+dev.off()
+
+
 # Macroeconomic Cost-Benefit Analysis (Minimal Required Growth Returns) --------------------------------------------
 
-CEMACGDP23 <- 90889016753 * 0.8 # CEMAC GDP 2023 in constant 2015 USD
+CEMACGDP23 <- 90889016753 # * 0.8 # CEMAC GDP 2023 in constant 2015 USD
 
 my_PDV <- function(gdp = CEMACGDP23, df = 1.1, gr_old_perc = 3.1, gr_new_perc = 4.11, max_years = 30) {
   gr_old = 1 + gr_old_perc / 100
@@ -1327,9 +1446,14 @@ inv_PDV(my_PDV())
 
 # +++ This builds the components of <Table 7> +++
 packages <- c(
-  "All Links MA > 0.5" = 3.305958e9, 
-  "All Links MA > 1" = 1.856438e9, 
-  "All Links MA > 2" = 0.8424899e9
+  # "All Links MA > 0.5" = 3.305958e9, 
+  # "All Links MA > 1" = 1.856438e9, 
+  # "All Links MA > 2" = 0.8424899e9
+  "All Works" = 27e9,
+  "All Upgrades" = 19e9,
+  "All Links MA > 0.5 Avg" = 4.3e9, 
+  "All Links MA > 1 NoFR" = 5.4e9, 
+  "All Links MA > 1 NFNN" = 4e9
 )
 
 calc_rates <- function(x, bgr) {
@@ -1359,21 +1483,21 @@ nodes_tmp <- nodes |>
 list(nodes = nodes_tmp,
      edges = edges, 
      add_links = add_links) |>
-  qsave("results/transport_network/PE/PE_results_google.qs")
+  qsave("results/transport_network/PE/PE_results_MACR_90kmh_google.qs")
 
 nodes_tmp |> transform(set_names(mctl(st_coordinates(geometry)), c("lon", "lat"))) |> 
-  atomic_elem() |> qDT() |> fwrite("results/transport_network/PE/csv/PE_results_nodes_google.csv")
-edges |> atomic_elem() |> qDT() |> fwrite("results/transport_network/PE/csv/PE_results_edges_google.csv")
-add_links |> atomic_elem() |> qDT() |> fwrite("results/transport_network/PE/csv/PE_results_add_links_google.csv")
+  atomic_elem() |> qDT() |> fwrite("results/transport_network/PE/csv/PE_results_nodes_MACR_90kmh_google.csv")
+edges |> atomic_elem() |> qDT() |> fwrite("results/transport_network/PE/csv/PE_results_edges_MACR_90kmh_google.csv")
+add_links |> atomic_elem() |> qDT() |> fwrite("results/transport_network/PE/csv/PE_results_add_links_MACR_90kmh_google.csv")
 
 rm(nodes_tmp)
 
 # Also saving Simplified real edges
 edges_real <- qread("data/transport_network/edges_real_simplified.qs")
-edges_real %<>% join(atomic_elem(qread("results/transport_network/PE/PE_results_google.qs")$edges), on = c("from", "to"), drop = "x")
+edges_real %<>% join(atomic_elem(qread("results/transport_network/PE/PE_results_MACR_90kmh_google.qs")$edges), on = c("from", "to"), drop = "x")
 
 # mapview::mapview(edges_real, zcol = "MA_gain_pusd_cons")
-edges_real %>% qsave("results/transport_network/PE/PE_edges_real_google.qs")
+edges_real %>% qsave("results/transport_network/PE/PE_edges_real_MACR_90kmh_google.qs")
 
 #############################################
 # Saving Graphs for OTN (GE Analysis)
@@ -1400,7 +1524,7 @@ sum(nodes$city_port)
 
 graph_nodes <- nodes |> qDT() |> 
   transform(set_names(mctl(st_coordinates(geometry)), c("lon", "lat"))) |> 
-  select(lon, lat, iso3c, city_country, city_port, population,  IWI, gdp, wealth) |> 
+  select(lon, lat, iso3c, city_country, city_port, population,  IWI, gdp, wealth, gdp_other, SPAM_TOTAL, SPAM_TOP80) |> 
   join(compute(cities_ports, city_port = TRUE,
                keep = .c(city_country, port_locode, port_name, port_status, outflows)), 
        on = c("city_country", "city_port")) |> 
@@ -1414,7 +1538,7 @@ identical(graph_add$to_ctry, graph_nodes$iso3c[graph_add$to])
 
 # Saving
 for (name in .c(graph_orig, graph_add, graph_nodes)) {
-  sprintf("data/transport_network/csv/%s_google.csv", name) |> 
+  sprintf("data/transport_network/csv/%s_MACR_90kmh_google.csv", name) |> 
     fwrite(x = get(name))
 }
 
@@ -1423,7 +1547,7 @@ load("data/transport_network/trans_CEMAC_network_google.RData")
 
 # Load previous saved graphs
 graphs <- sapply(.c(graph_orig, graph_add, graph_nodes), function(name)
-  sprintf("data/transport_network/csv/%s_google.csv", name) |> fread())
+  sprintf("data/transport_network/csv/%s_MACR_90kmh_google.csv", name) |> fread())
 graphs$graph_orig$add <- FALSE
 graphs$graph_add$add <- TRUE
 
@@ -1449,7 +1573,7 @@ TAN_env$nodes_param <- nodes
 TAN_env$edges_param <- edges
 TAN_env$add_links_param <- add_links
 TAN_env$net_param <- net
-save(list = ls(TAN_env), file = "data/transport_network/trans_CEMAC_network_param_google.RData", envir = TAN_env)
+save(list = ls(TAN_env), file = "data/transport_network/trans_CEMAC_network_param_MACR_90kmh_google.RData", envir = TAN_env)
 
 
 
@@ -1472,7 +1596,7 @@ save(list = ls(TAN_env), file = "data/transport_network/trans_CEMAC_network_para
 edges_real <- qread("data/transport_network/edges_real_simplified.qs") |>
   rmapshaper::ms_simplify(keep = 0.1) |> st_make_valid()
 
-list2env(qread("results/transport_network/PE/PE_results_google.qs"), globalenv())
+list2env(qread("results/transport_network/PE/PE_results_MACR_90kmh_google.qs"), globalenv())
 tfm(edges_real) <- atomic_elem(edges)
 # add_links <- add_links_param
 
@@ -1593,13 +1717,6 @@ costs_million <- c(CD13_P2 = 994.572, KPLB = 110.008, KMA = 426.858,
                    CBB = 79.28, ND = 290.264)
 sum(costs_million)
 
-edges_real_target |>
-  subset(ckmatch(planned_segments, list(from_city, to_city))) |>
-  with(ug_cost_km * distance / 1000) |>
-  sum() |> divide_by(1e6) # |> multiply_by(1.19)
-
-
-# 273 million -> very low!! 
 
 # Plotting gains: 
 edges_real_target <- edges_real |> 
@@ -1607,35 +1724,62 @@ edges_real_target <- edges_real |>
   mutate(duration = duration_imp, total_time = total_time_imp)
 
 edges_real_target <- edges_real_target |> rowbind(fill = TRUE,
-                                                  subset(add_links, from_city == "m'baiki - CAF" & to_city == "ouesso - COG", 
-                                                         MA_90_min_speed_perc = MA_gain_perc, 
-                                                         MA_90_min_speed_bt_perc = MA_per_link_90kmh_bt_perc, 
-                                                         MA_gain_pusd = MA_gain_90kmh_pusd,
-                                                         MA_gain_pusd_bt = MA_gain_90kmh_pusd_bt,
-                                                         distance = distance,
-                                                         duration = duration_90kmh,
-                                                         total_time = total_time_90kmh,
-                                                         geometry))
+  subset(add_links, from_city == "m'baiki - CAF" & to_city == "ouesso - COG", 
+         MA_90_min_speed = MA_per_link_90kmh, #MA_gain_perc, 
+         MA_90_min_speed_bt = MA_per_link_90kmh_bt, 
+         MA_90_min_speed_perc = MA_per_link_90kmh_perc, #MA_gain_perc, 
+         MA_90_min_speed_bt_perc = MA_per_link_90kmh_bt_perc, 
+         MA_gain_pusd = MA_gain_90kmh_pusd,
+         MA_gain_pusd_bt = MA_gain_90kmh_pusd_bt,
+         ug_cost_km = cost_km,
+         distance = distance,
+         duration = duration_90kmh,
+         total_time = total_time_90kmh,
+         geometry))
 
-pdf("figures/PE/trans_CEMAC_network_MA_90_min_speed_bt_perc_planned_projects.pdf", width = 6.5, height = 8)
+edges_real_target |>
+  # subset(ckmatch(planned_segments, list(from_city, to_city))) |>
+  with(ug_cost_km * distance / 1000) |>
+  sum() |> divide_by(1e6) # |> multiply_by(1.19)
+
+for (v in .c(perc, bt_perc)) {
+  print(v)
+  Sys.sleep(1)
+  pdf(sprintf("figures/PE/trans_CEMAC_network_MACR_90_min_speed_%s_planned_projects.pdf", v), width = 6.5, height = 8)
+  tm_basemap("CartoDB.Positron", zoom = 6) +
+    tm_shape(edges_real) +
+    tm_lines(lwd = 2, col = "grey70") +
+    tm_shape(edges_real_target) + 
+    tm_lines(col = paste0("MA_90_min_speed_", v), 
+             col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.01, 0.025, 0.1, 0.25, 0.5, Inf)),
+             col.legend = tm_legend(expression(Delta~"%"~"MA [GDP/min]"), position = c("right", "bottom"), frame = FALSE, 
+                                    text.size = 1.5, title.size = 1.7), lwd = 2) + 
+    tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
+    tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
+    tm_layout(frame = FALSE) 
+  dev.off()
+}
+
+pdf("figures/PE/trans_CEMAC_network_MACR_90_min_speed_bt_ratio_planned_projects.pdf", width = 6.5, height = 8)
 tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_shape(edges_real) +
   tm_lines(lwd = 2, col = "grey70") +
-  tm_shape(edges_real_target) + 
-  tm_lines(col = "MA_90_min_speed_bt_perc", 
-           col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.01, 0.025, 0.1, 0.25, 0.5, Inf)),
-           col.legend = tm_legend(expression(Delta~"%"~"MA [GDP/min]"), position = c("right", "bottom"), frame = FALSE, 
-                                  text.size = 1.5, title.size = 1.7), lwd = 2) + 
+  tm_shape(mutate(edges_real_target, MA_90_min_speed_bt_ratio = replace_na(perch_to_diff(MA_90_min_speed_bt, MA_90_min_speed_bt_perc) / perch_to_diff(MA_90_min_speed, MA_90_min_speed_perc), 0))) +
+  tm_lines(col = "MA_90_min_speed_bt_ratio", 
+           col.scale = tm_scale_intervals(values = "turbo", breaks = seq(0, 1, 0.2)), # breaks = c(0, 0.25, 0.5, 1, 1.5, 2),  # For Ratio
+           col.legend = tm_legend(expression(Delta~"MA Ratio"), 
+                                  position = c("right", "bottom"), frame = FALSE, 
+                                  text.size = 1.5, title.size = 2), lwd = 2) + 
   tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
   tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
-  tm_layout(frame = FALSE) 
+  tm_layout(frame = FALSE)
 dev.off()
 
 for (v in .c(pusd, pusd_bt)) {
   print(v)
-  # <Figure 32: First 3 Plots>
-  pdf(sprintf("figures/PE/trans_CEMAC_network_MA_gain_all_90kmh_%s_planned_projects.pdf", v), width = 6.5, height = 8)
-  tm_basemap("CartoDB.Positron", zoom = 6) +
+  Sys.sleep(1)
+  pdf(sprintf("figures/PE/trans_CEMAC_network_MACR_gain_all_90kmh_%s_planned_projects.pdf", v), width = 6.5, height = 8)
+  print(tm_basemap("CartoDB.Positron", zoom = 6) +
     tm_shape(edges_real) +
     tm_lines(lwd = 2, col = "grey70") +
     tm_shape(edges_real_target) + 
@@ -1646,9 +1790,25 @@ for (v in .c(pusd, pusd_bt)) {
                                     text.size = 1.25, title.size = 1.7), lwd = 2) + 
     tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
     tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
-    tm_layout(frame = FALSE)
+    tm_layout(frame = FALSE))
   dev.off()
 } # ; rm(v)
+
+pdf("figures/PE/trans_CEMAC_network_MACR_gain_all_90kmh_pusd_bt_ratio_planned_projects.pdf", width = 6.5, height = 8)
+tm_basemap("CartoDB.Positron", zoom = 6) +
+  tm_shape(edges_real) +
+  tm_lines(lwd = 2, col = "grey70") +
+  tm_shape(mutate(edges_real_target, MA_90_min_speed_pusd_bt_ratio = MA_gain_pusd_bt / MA_gain_pusd)) +
+  tm_lines(col = "MA_90_min_speed_pusd_bt_ratio", 
+           col.scale = tm_scale_intervals(values = "turbo", breaks = seq(0, 1, 0.2)), # breaks = c(0, 0.25, 0.5, 1, 1.5, 2),  # For Ratio
+           col.legend = tm_legend(expression(Delta~"MA Ratio"), 
+                                  position = c("right", "bottom"), frame = FALSE, 
+                                  text.size = 1.5, title.size = 2), lwd = 2) + 
+  tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
+  tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
+  tm_layout(frame = FALSE)
+dev.off()
+
 
 
 ## Total Gains
@@ -1657,51 +1817,66 @@ for (v in .c(pusd, pusd_bt)) {
 
 edges_target <- edges |> subset(ckmatch(planned_segments, list(from_city, to_city))) |>
   mutate(duration = duration_imp, total_time = total_time_imp)
+
 edges_target <- edges_target |> rowbind(fill = TRUE,
-                                        subset(add_links, from_city == "m'baiki - CAF" & to_city == "ouesso - COG", 
-                                               MA_90_min_speed_perc = MA_gain_perc, 
-                                               MA_90_min_speed_bt_perc = MA_per_link_90kmh_bt_perc, 
-                                               MA_gain_pusd = MA_gain_90kmh_pusd,
-                                               MA_gain_pusd_bt = MA_gain_90kmh_pusd_bt,
-                                               distance = distance,
-                                               duration = duration_90kmh,
-                                               total_time = total_time_90kmh,
-                                               ug_cost_km = cost_km, distance,
-                                               geometry))
+  subset(add_links, from_city == "m'baiki - CAF" & to_city == "ouesso - COG", 
+         MA_90_min_speed = MA_per_link_90kmh, #MA_gain_perc, 
+         MA_90_min_speed_bt = MA_per_link_90kmh_bt, 
+         MA_90_min_speed_perc = MA_per_link_90kmh_perc, #MA_gain_perc, 
+         MA_90_min_speed_bt_perc = MA_per_link_90kmh_bt_perc, 
+         MA_gain_pusd = MA_gain_90kmh_pusd,
+         MA_gain_pusd_bt = MA_gain_90kmh_pusd_bt,
+         ug_cost_km = cost_km,
+         distance = distance,
+         duration = duration_90kmh,
+         total_time = total_time_90kmh,
+         geometry))
+
+# Cost
+edges_real_target |> with(ug_cost_km * distance / 1000) |> sum() |> divide_by(1e6) # |> multiply_by(1.19)
 
 net_imp_proj <- as_sfnetwork(rbind(subset(edges, !planned, duration, total_time), 
                                    select(edges_target, duration, total_time)), 
                              directed = FALSE)
-plot(net_imp_proj)
-nodes_coord <- qDF(st_coordinates(nodes))
+# plot(net_imp_proj)
 ind_imp_proj <- ckmatch(nodes_coord, mctl(st_coordinates(st_geometry(net_imp_proj, "nodes"))))
-sp_distances <- st_distance(nodes)
 identical(st_distance(st_geometry(net_imp_proj, "nodes"))[ind_imp_proj, ind_imp_proj], sp_distances)
 
 times_imp_proj <- st_network_cost(net_imp_proj, weights = "duration")[ind_imp_proj, ind_imp_proj]
 times_imp_bt_proj <- st_network_cost(net_imp_proj, weights = "total_time")[ind_imp_proj, ind_imp_proj]
-# times_imp_bt_proj <- times_imp_proj + bdt_nodes
+# Again adjust frictions scenario. Default: cumulative frictions.
+# times_imp_bt_proj <- times_imp_proj + btt_nodes
 sum(times_imp_bt_proj) / sum(times_imp_proj)
 mean(times_imp_bt_proj / times_imp_proj, na.rm = TRUE)
 
-# Total gain
-# all.equal(unattrib(nodes_coord), mctl(st_coordinates(st_geometry(net, "nodes"))))
-net <- as_sfnetwork(edges, directed = FALSE)
-ind <- ckmatch(nodes_coord, mctl(st_coordinates(st_geometry(net, "nodes"))))
-times <- st_network_cost(net, weights = "duration")[ind, ind]
-MA <- total_MA(times, nodes$gdp)
-MA_imp_proj <- total_MA(times_imp_proj, nodes$gdp)
-MA_imp_proj / MA
+if(!exists("MA")) {
+  net <- as_sfnetwork(edges, directed = FALSE)
+  ind <- ckmatch(nodes_coord, mctl(st_coordinates(st_geometry(net, "nodes"))))
+  times <- st_network_cost(net, weights = "duration")[ind, ind]
+  MA <- total_MA(times, nodes$gdp)
+}
+
+# Total gain: No Frictions
+MA_imp_proj <- total_MA(times_imp_proj, nodes$gdp) 
+print(MA_imp_proj / MA) 
+sum(edges_target$MA_90_min_speed_perc)
+ma_gain_per_min_proj <- MA_imp_proj - MA 
+print(ma_gain_per_min_proj / 1e9) # MA gain in billions
+# MA gain per investment:
+print(ma_gain_per_min_proj / sum(with(edges_target, ug_cost_km * distance / 1000)))
+
+# Total gain: Frictions
+MA_imp_bt_proj <- total_MA(times_imp_bt_proj, nodes$gdp) 
+print(MA_imp_bt_proj / MA_bt) 
 sum(edges_target$MA_90_min_speed_bt_perc)
-
-ma_gain_per_min_proj <- MA_imp_proj - MA
-
-ma_gain_per_min_proj / 1e9 # MA gain in billions
-ma_gain_per_min_proj / sum(with(edges_target, ug_cost_km * distance / 1000)) # MA gain per investment
-
+ma_gain_per_min_proj <- MA_imp_bt_proj - MA_bt
+print(ma_gain_per_min_proj / 1e9) # MA gain in billions
+# MA gain per investment:
+print(ma_gain_per_min_proj / sum(with(edges_target, ug_cost_km * distance / 1000)))
 
 
-# Macroeconomic Cost-Benefit Analysis
+
+# Macroeconomic Cost-Benefit Analysis of Projects ----------------------------
 
 edges_target |>
   subset(ckmatch(planned_segments, list(from_city, to_city))) |>
@@ -1709,13 +1884,13 @@ edges_target |>
   sum() |> divide_by(1e6) # |> multiply_by(1.19)
 
 
-sapply(c(Mycost = 2487704423, Pcost = sum(costs_million)*1e6), calc_rates, 3.5) |> t() |> round(3)
+sapply(c(Mycost = 3400257362, Pcost = sum(costs_million)*1e6), calc_rates, 3.5) |> t() |> round(3)
 
-sapply(c(Mycost = 2487704423, Pcost = sum(costs_million)*1e6), calc_rates, 2) |> t() |> round(3)
+sapply(c(Mycost = 3400257362, Pcost = sum(costs_million)*1e6), calc_rates, 2) |> t() |> round(3)
 
 
 # Test cost
-tmp = fread("data/transport_network/csv/graph_orig_google.csv")
+tmp = fread("data/transport_network/csv/graph_orig_MACR_90kmh_google.csv")
 tmp %<>% join(select(edges, from, from_city, to, to_city))
 
 tmp |>

@@ -76,10 +76,10 @@ settfm(nodes, product = nif(major_city_port, NA_integer_, # Heterogeneous produc
 table(nodes$product, na.exclude = FALSE)
 setv(nodes$product, whichNA(nodes$product), seq_along(largest) + 4L)
 # Need to write this to ensure product classification is available for GE simulation !!!!
-nodes_param <- fread("data/transport_network/csv/graph_nodes_google.csv")
+nodes_param <- fread("data/transport_network/csv/graph_nodes_MACR_90kmh_google.csv")
 nodes_param |> select(lon, lat) |> qM() |> subtract(st_coordinates(nodes)) |> descr() |> print(digits = 7)
 nodes_param$product <- nodes$product
-# nodes_param |> atomic_elem() |> qDT() |> fwrite("data/transport_network/csv/graph_nodes_google.csv")
+# nodes_param |> atomic_elem() |> qDT() |> fwrite("data/transport_network/csv/graph_nodes_MACR_90kmh_google.csv")
 rm(nodes_param)
 attr(nodes$product, "levels") <- c("Small Town", "City > 50K", "Port", "City > 100K", paste("Major City", seq_along(largest)))
 class(nodes$product) <- "factor"
@@ -106,8 +106,8 @@ dev.off()
 
 # Plot population and productivity (for GE Calibration) ------------------------------------------------------
 
-graph_nodes <- fread("data/transport_network/csv/graph_nodes_google.csv") 
-graph_edges <- fread("data/transport_network/csv/graph_orig_google.csv") 
+graph_nodes <- fread("data/transport_network/csv/graph_nodes_MACR_90kmh_google.csv") 
+graph_edges <- fread("data/transport_network/csv/graph_orig_MACR_90kmh_google.csv") 
 
 # Now: Plotting Productivity
 graph_nodes %<>%
@@ -135,7 +135,7 @@ graph_nodes |> qDT() |>
 edges_real <- qread("data/transport_network/edges_real_simplified.qs")
 
 # <Figure 33>
-pdf("figures/trans_CEMAC_network_GE_parameterization_latest_google.pdf", width = 9.5, height = 12)
+pdf("figures/trans_CEMAC_network_GE_parameterization_latest_MACR_90kmh_google.pdf", width = 9.5, height = 12)
 tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_shape(mutate(edges_real, speed_kmh = (edges$distance/1000)/(edges$duration/60^2)) |> 
              rowbind(mutate(add_links, speed_kmh = 0), fill = TRUE)) +
@@ -149,15 +149,16 @@ tm_basemap("CartoDB.Positron", zoom = 6) +
           size.scale = tm_scale_intervals(5, style = "jenks", values.scale = 2.5), # 
           size.legend = tm_legend("Port Outflows (M)", position = tm_pos_in(0.57, 0.4), frame = FALSE, text.size = 1.2, title.size = 1.4),
           fill = scales::alpha("black", 0.25)) +
-  tm_shape(subset(graph_nodes, population > 0) |> mutate(pop = population / 1000)) + 
+  tm_shape(subset(graph_nodes, population > 0) |> 
+             mutate(pop = population / 1000, prod = gdp / population)) + 
   tm_dots(size = "pop", 
           size.scale = tm_scale_intervals(breaks = c(0, 200, 1000, Inf),
                                           values = c(1.5, 3, 5)*0.2),
           size.legend = tm_legend("Population (K)", position = tm_pos_in(0.57, 0.17), stack = "h", frame = FALSE, text.size = 1.2, title.size = 1.4),
-          fill = "IWI",
+          fill = "prod",
           size.free = TRUE,
           fill.scale = tm_scale_intervals(4, values = "inferno"), #viridis::inferno(5, alpha = 0.5, direction = -1)),
-          fill.legend = tm_legend("Productivity (IWI)", position = tm_pos_in(0.57, 0.17), frame = FALSE, text.size = 1.2, title.size = 1.4)) +
+          fill.legend = tm_legend("Productivity (GDP)", position = tm_pos_in(0.57, 0.17), frame = FALSE, text.size = 1.2, title.size = 1.4)) +
   tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
   tm_layout(frame = FALSE)
 dev.off()
