@@ -147,7 +147,7 @@ Characterizes \textbf{economically optimal} regional road network investments in
     \begin{columns} \setlength{\columnsep}{1mm} % Set the space between columns to 1 cm
         % Left column
         \begin{column}{0.22\textwidth}
-\small 54 largest cities with radius $>$100km, incl. 6 intnl. ports $\to$\\\vspace{2mm} connected with 1431 fastest car routes (OpenStreetMap $+$ Graphhopper) $\to$\\\vspace{2mm} network with 196 nodes and 313 edges $+$ 71 additional links with $>50$\% route efficiency gains $\to$\\\vspace{2mm} parameterized with Google Maps speed (new links 0 speed).
+\small 54 largest cities with radius $>$100km, incl. 6 intnl. ports $\to$\\\vspace{2mm} connected with 1431 fastest car routes (OpenStreetMap $+$ Graphhopper) $\to$\\\vspace{2mm} network with 196 nodes and 313 edges $+$ 71 additional links with $>50$\% route efficiency gains (27.1\% longer than GCD: link mean) $\to$\\\vspace{2mm} parameterized with Google Maps speed (new links 0 speed).
         \end{column}
         % Right column
         \begin{column}{0.9\textwidth}
@@ -178,7 +178,7 @@ CASS (19.8), PLNT (13), OILP (6.7), SUGC (6.7), MAIZ (6.6), ORTS (5.5), SORG (5.
 \resizebox{\textwidth}{!}{
 \begin{tabular}{@{}c@{}c@{}}
 \includegraphics[width=0.5\textwidth, trim= {5mm 0 5mm 0}, clip]{"../figures/IWI_CEMAC_GRID.pdf"} & 
-\includegraphics[width=0.5\textwidth, trim= {5mm 0 5mm 0}, clip]{"../figures/SPAM_CEMAC_TOP80.pdf"}
+\includegraphics[width=0.5\textwidth, trim= {5mm 0 5mm 0}, clip]{"../figures/crops/SPAM_CEMAC_TOP80.pdf"}
 \end{tabular}
 }
         \end{column}
@@ -318,19 +318,197 @@ All Links $>\$1$/min/\$ (NFNN) & \$4B & $44-47$ & 0.87\% $\to$ 3.530 & 1.91\% $\
 
 \sectionframe{Optimal Investments in General Equilibrium}
 
+\begin{frame}[label=GEModel]{Optimal Transport Networks in Spatial Equilibrium \quad \hyperlink{GEModelSol}{\beamergotobutton{model solution}}}
+\setlength{\abovedisplayskip}{2pt}
+\setlength{\belowdisplayskip}{2pt}
+\vspace{-2mm}
+\citet{fajgelbaum2020optimal} nest optimal allocation and network flow problems into a global network design problem and compute welfare maximizing transport networks:
+\begin{equation}
+\max_{c_j,h_j,C_j^n,L_j^n,Q_{jk}^n,I_{jk}} \sum_{j} \omega_j L_j U (c_j, h_j)
+\end{equation}
+with $U (c,h) = c^\alpha h^{1-\alpha}$, s.t. availability of (non-)traded goods and balanced flows
+\begin{equation}
+c_j L_j \leq \left[ \sum_{n=1}^{N} (C_j^n)^{\frac{\sigma-1}{\sigma}} \right]^{\frac{\sigma}{\sigma-1}}, \sigma > 1,\quad\forall\ j; \qquad h_j L_j \leq H_j\quad\forall\ j;
+\end{equation}
+\begin{equation} \label{eq:BALFL}
+C_j^n + \sum_{k \in N(j)} \left(1 + \tau_{jk} (Q_{jk}^n, I_{jk}) \right) Q_{jk}^n \leq Z_j^n (L_j^n)^\alpha + \sum_{k \in N(j)} Q_{kj}^n\quad\forall\ j,n
+\end{equation}
+with per unit shipping cost $\tau_{jk} (Q_{jk}^n, I_{jk}) = \delta^\tau_{jk} (Q_{jk}^n)^\beta I_{jk}^{-\gamma}$, a network-building constraint, exogenous network bounds, infrastructure symmetry, local labor market clearing
+\begin{equation} 
+\sum_{j} \sum_{k \in N(j)} \delta^I_{jk} I_{jk} \leq K; \quad 0 \leq \underline{I}_{jk} \leq I_{jk} \leq \overline{I}_{jk};\quad I_{jk} = I_{kj};\quad \sum_{n=1}^N L^n_j\leq L_j\quad\forall\ j;
+\end{equation}
+and the non-negativity of $c_j$, $C^n_j$, $L^n_j$, $I_{jk}$, and $Q^n_{jk}$.
+\end{frame}
+
+
+\begin{frame}{Parameterization for GE Simulations} 
+\begin{adjustbox}{center}
+    \begin{columns} \setlength{\columnsep}{0.5mm} % Set the space between columns to 1 cm
+        % Left column
+                \begin{column}{0.015\textwidth}
+                \end{column}
+        \begin{column}{0.33\textwidth} \scriptsize 
+\setlength{\abovedisplayskip}{6pt} % Space above equations
+\setlength{\belowdisplayskip}{6pt} % Space below equations
+\setlength{\parindent}{0pt} % Disable paragraph indentation
+\hphantom{.}\\ \vspace{-3mm}
+20 different products (largest 16 cities own). $\sigma = 3.8$ \citep{bajzik2020estimating}, $Z_j^\text{city} = \text{GDP}_j/\text{Population}_j$, 
+$$Z_j^{\text{port}} = \frac{2100 \times \text{Outflow}_j}{\text{Population}_j}.\ (\text{16\%})$$
+Following \citet{graff2024spatial}: $\alpha=0.7$, $\beta = 1.177$, and $\gamma = 0.946$ (DRS).
+$$ \text{I}_{jk} = \text{speed (km/h)}_{jk} \ \ \forall\, j,k,$$
+$\underline{I}_{jk} = \text{I}_{jk}$, $\overline{I}_{jk} = \max(I_{jk}, 90)$. Per km/h infrastructure building cost $\delta^\text{I}_{jk}$:
+$$\delta^\text{I}_{jk} = \text{upgrade cost}_{jk} / (\overline{I}_{jk} - \text{I}_{jk}) \ \ \forall\, j,k.$$
+Baseline budget is $K_0 = \delta^\text{I}_{jk}\times I_{jk}$. Planner given $K_0+\$1\text{B}/\$2\text{B}/\$4\text{B}$. 
+Iceberg trade costs \citep{graff2024spatial}: 
+ $$\delta^\tau_{jk} = 0.1159 \times \ln(\text{distance in miles}_{jk}).$$
+        \end{column}
+        % Right column
+        \begin{column}{0.8\textwidth}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{@{}c@{}c@{}}
+\includegraphics[width=0.5\textwidth, trim= {11.8mm 0mm 11mm 0mm}, clip]{"../figures/GE/trans_africa_network_reduced_20_products_google.pdf"} & 
+\includegraphics[width=0.5\textwidth, trim= {9mm 0 9mm 0}, clip]{"../figures/trans_CEMAC_network_GE_parameterization_latest_google.pdf"}
+\end{tabular}
+}
+        \end{column}
+    \end{columns}
+  \end{adjustbox}
+\end{frame}
+
+
+\begin{frame}[label=IOU]{Optimal Allocations - Only Upgrades \quad \hyperlink{EXPOU}{\beamergotobutton{exports}}}
+\vspace{-1mm}
+\begin{adjustbox}{center}
+\begin{tabular}{@{}c@{}|@{}c@{}|@{}c@{}} 
+\$1B USD'15 & \$2B USD'15 & \$4B USD'15 \\
+Upgraded: 1543km & Upgraded: 3152km & Upgraded: 6905km \\ 
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/GE/trans_africa_network_GE_20g_1b_fixed_cgc_sigma3.8_rho0_julia_MACR_90kmh_google_perc_ug.pdf"} & 
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/GE/trans_africa_network_GE_20g_2b_fixed_cgc_sigma3.8_rho0_julia_MACR_90kmh_google_perc_ug.pdf"} &
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/GE/trans_africa_network_GE_20g_4b_fixed_cgc_sigma3.8_rho0_julia_MACR_90kmh_google_perc_ug.pdf"}  
+\end{tabular}
+\end{adjustbox}
+\end{frame}
+
+\begin{frame}{Optimal Allocations - Only Upgrades - Inequality Aversion ($\rho = 2$)}
+\vspace{-1mm}
+\begin{adjustbox}{center}
+\begin{tabular}{@{}c@{}|@{}c@{}|@{}c@{}} 
+\$1B USD'15 & \$2B USD'15 & \$4B USD'15 \\
+Upgraded: 1530km & Upgraded: 3085km & Upgraded: 6562km \\ 
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/GE/trans_africa_network_GE_20g_1b_fixed_cgc_sigma3.8_rho2_julia_MACR_90kmh_google_perc_ug.pdf"} & 
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/GE/trans_africa_network_GE_20g_2b_fixed_cgc_sigma3.8_rho2_julia_MACR_90kmh_google_perc_ug.pdf"} &
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/GE/trans_africa_network_GE_20g_4b_fixed_cgc_sigma3.8_rho2_julia_MACR_90kmh_google_perc_ug.pdf"}  
+\end{tabular}
+\end{adjustbox}
+\end{frame}
+
+\begin{frame}[label=III]{Optimal Allocations \quad \hyperlink{EXP}{\beamergotobutton{exports}}}
+\vspace{-1mm}
+\begin{adjustbox}{center}
+\begin{tabular}{@{}c@{}|@{}c@{}|@{}c@{}} 
+\$1B USD'15 & \$2B USD'15 & \$4B USD'15 \\
+New: 1607km $|$ UG: 116km & New: 2943km $|$ UG: 416km & New: 4894km $|$ UG: 1713km \\ 
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/GE/trans_africa_network_GE_add_20g_1b_fixed_cgc_sigma3.8_rho0_julia_MACR_90kmh_google_perc_ug.pdf"} & 
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/GE/trans_africa_network_GE_add_20g_2b_fixed_cgc_sigma3.8_rho0_julia_MACR_90kmh_google_perc_ug.pdf"} &
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/GE/trans_africa_network_GE_add_20g_4b_fixed_cgc_sigma3.8_rho0_julia_MACR_90kmh_google_perc_ug.pdf"}  
+\end{tabular}
+\end{adjustbox}
+\end{frame}
+
+\begin{frame}{Optimal Allocations - Inequality Aversion ($\rho = 2$)}
+\vspace{-1mm}
+\begin{adjustbox}{center}
+\begin{tabular}{@{}c@{}|@{}c@{}|@{}c@{}} 
+\$1B USD'15 & \$2B USD'15 & \$4B USD'15 \\
+New: 1553km $|$ UG: 124km & New: 2878km $|$ UG: 369km & New: 5017km $|$ UG: 1529km \\ 
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/GE/trans_africa_network_GE_add_20g_1b_fixed_cgc_sigma3.8_rho2_julia_MACR_90kmh_google_perc_ug.pdf"} & 
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/GE/trans_africa_network_GE_add_20g_2b_fixed_cgc_sigma3.8_rho2_julia_MACR_90kmh_google_perc_ug.pdf"} &
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/GE/trans_africa_network_GE_add_20g_4b_fixed_cgc_sigma3.8_rho2_julia_MACR_90kmh_google_perc_ug.pdf"}  
+\end{tabular}
+\end{adjustbox}
+\end{frame}
+
+\begin{frame}{Impact of Frictions - Only Upgrades}
+\vspace{-1mm}
+\begin{adjustbox}{center}
+\begin{tabular}{@{}c@{}|@{}c@{}|@{}c@{}} 
+\$1B USD'15 & \$2B USD'15 & \$4B USD'15 \\
+Upgraded: 1543km & Upgraded: 3152km & Upgraded: 6905km \\ 
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/GE/trans_africa_network_GE_20g_1b_fixed_cgc_sigma3.8_rho0_julia_MACR_90kmh_google_Ijk_bc_perc_ug_diff.pdf"} & 
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/GE/trans_africa_network_GE_20g_2b_fixed_cgc_sigma3.8_rho0_julia_MACR_90kmh_google_Ijk_bc_perc_ug_diff.pdf"} &
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/GE/trans_africa_network_GE_20g_4b_fixed_cgc_sigma3.8_rho0_julia_MACR_90kmh_google_Ijk_bc_perc_ug_diff.pdf"}  
+\end{tabular}
+\end{adjustbox}
+\end{frame}
+
+\begin{frame}{Impact of Frictions}
+\vspace{-1mm}
+\begin{adjustbox}{center}
+\begin{tabular}{@{}c@{}|@{}c@{}|@{}c@{}} 
+\$1B USD'15 & \$2B USD'15 & \$4B USD'15 \\
+New: 1607km $|$ UG: 116km & New: 2943km $|$ UG: 416km & New: 4894km $|$ UG: 1713km \\ 
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/GE/trans_africa_network_GE_add_20g_1b_fixed_cgc_sigma3.8_rho0_julia_MACR_90kmh_google_Ijk_bc_perc_ug_diff.pdf"} & 
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/GE/trans_africa_network_GE_add_20g_2b_fixed_cgc_sigma3.8_rho0_julia_MACR_90kmh_google_Ijk_bc_perc_ug_diff.pdf"} &
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/GE/trans_africa_network_GE_add_20g_4b_fixed_cgc_sigma3.8_rho0_julia_MACR_90kmh_google_Ijk_bc_perc_ug_diff.pdf"}  
+\end{tabular}
+\end{adjustbox}
+\end{frame}
+
+
 %------------------------------------------------
 \section{Evaluating Regional Road Projects}
 %------------------------------------------------
 
 \sectionframe{Evaluating Regional Road Projects}
 
+\begin{frame}{Regional Road Projects - MA (GDP/Minute) Gains}
+\vspace{-3mm}
+All road projects sum to 3.4 billion USD'15 in my calculations. They jointly yield a \textbf{28.6\%} MA gain (2.14\$/min/\$), which is larger than the sum of individual marginal gains at 23.4\%. Under frictions: \textbf{26.7\%} (1.17\$/min/\$, $\sum$ individual gains $=$ 23.2\%). \\ \vspace{-1.2mm}
+\begin{adjustbox}{center}
+\begin{tabular}{@{}c@{}c@{}@{}c@{}} 
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/PE/trans_CEMAC_network_MACR_90_min_speed_perc_planned_projects.pdf"} & 
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/PE/trans_CEMAC_network_MACR_90_min_speed_bt_perc_planned_projects.pdf"} & 
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/PE/trans_CEMAC_network_MACR_90_min_speed_bt_ratio_planned_projects.pdf"}
+\end{tabular}
+\end{adjustbox}
+\end{frame}
+
+\begin{frame}{Regional Road Projects - MA Returns (\$/min/\$)}
+\vspace{-3mm}
+All road projects sum to 3.4 billion USD'15 in my calculations. They jointly yield a \textbf{28.6\%} MA gain (2.14\$/min/\$), which is larger than the sum of individual marginal gains at 23.4\%. Under frictions: \textbf{26.7\%} (1.17\$/min/\$, $\sum$ individual gains $=$ 23.2\%). \\ \vspace{-1.2mm}
+\begin{adjustbox}{center}
+\begin{tabular}{@{}c@{}c@{}@{}c@{}} 
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/PE/trans_CEMAC_network_MACR_gain_all_90kmh_pusd_planned_projects.pdf"} & 
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/PE/trans_CEMAC_network_MACR_gain_all_90kmh_pusd_bt_planned_projects.pdf"} & 
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/PE/trans_CEMAC_network_MACR_gain_all_90kmh_pusd_bt_ratio_planned_projects.pdf"}
+\end{tabular}
+\end{adjustbox}
+\end{frame}
+
+\begin{frame}{Regional Road Projects - Optimal GE Allocation of \$3.4B USD'15}
+\vspace{-1mm}
+\begin{adjustbox}{center}
+\begin{tabular}{@{}c@{}|@{}c@{}|@{}c@{}} 
+Upgrades & Upgrades Ineq. Av. & New Links + Upgrades \\
+Upgraded: 5350km & Upgraded: 5128km & New: 4213km $|$ UG: 1154km \\ 
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/GE/trans_africa_network_GE_20g_3200m_fixed_cgc_sigma3.8_rho0_julia_MACR_90kmh_google_perc_ug.pdf"} & 
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/GE/trans_africa_network_GE_20g_3200m_fixed_cgc_sigma3.8_rho2_julia_MACR_90kmh_google_perc_ug.pdf"} &
+\includegraphics[width=0.38\textwidth, trim= {0.9cm 0 0.9cm 0}, clip]{"../figures/GE/trans_africa_network_GE_add_20g_3200m_fixed_cgc_sigma3.8_rho0_julia_MACR_90kmh_google_perc_ug.pdf"}  
+\end{tabular}
+\end{adjustbox}
+\end{frame}
+
 %------------------------------------------------
-\section{Conclusion}
+\section{Conclusions}
 %------------------------------------------------
 
-\begin{frame}{Conclusion}
+\begin{frame}{Conclusions}
   \begin{itemize} 
-    \item 
+  	\item Road investments in Cameroon (Douala-Yaounde and up north toward N'Djamena) and in borders crossing to Cameroon yield greatest marginal benefits (Cameroon $=$ 46\% of CEMAC GDP and 45\% of CEMAC population).
+  	\item 100\% border frictions reduction yields 58\% MA gain, vs. 64\% gain from upgrades to 90km/h (\$19B USD'15) and 72\% from upgrades + \$8B USD'15 new links. 
+  	\item \$4B-\$5B USD'15 high-yield-links road packages (or below) can yield 43\%-53\% MA gains and should be highly-profitable in medium run (30-year PDV profitability requires 1\% increase in macroeconomic growth rate at 3.5\% baseline growth). 
+  	\item Planned works estimated at \$3.4B USD'15 yield 27-29\% MA gain (1.2-2.1\$/min/\$ vs. 1.4-2.8\$/min/\$ for the \$4B-\$5B PE packages) $\to$ modest inefficiency.
+    \item GE planners invest more in new links than upgrades if given the choice - unlike Africa \citep{krantz2024optimal} $\to$ strong indication that network needs to be expanded. (Also: inequality averse planners invest more in poorer north (Chad, CAR)).
   \end{itemize}
 \end{frame}
 
@@ -359,7 +537,7 @@ All Links $>\$1$/min/\$ (NFNN) & \$4B & $44-47$ & 0.87\% $\to$ 3.530 & 1.91\% $\
 \setcounter{framenumber}{0}
 \renewcommand{\insertframenumber}{R\arabic{framenumber}}
 
-\begin{frame}[allowframebreaks]{References}
+\begin{frame}{References}
 \bibliographystyle{apacite}
 \bibliography{bibliography}  % This links to a file bibliography.bib with the citations
 \end{frame}
@@ -377,7 +555,33 @@ All Links $>\$1$/min/\$ (NFNN) & \$4B & $44-47$ & 0.87\% $\to$ 3.530 & 1.91\% $\
 \setcounter{figure}{0}
 \renewcommand{\thefigure}{A\arabic{figure}}
 
+\begin{frame}[label=GEModelSol]{Optimal Transport Networks in Spatial Equilibrium \quad \hyperlink{GEModel}{\beamergotobutton{back}}}
+$\exists$ (more complex) model variants with cross-goods congestion and mobile labor. I assume cross-goods congestion but keep labour fixed (due to trade through ports).  \\ \vspace{4mm}
 
+Equilibrium prices $P^n_j$ are the Lagrange multipliers on the flows constraints (Eq. \ref{eq:BALFL}), and $P_K$ is the multiplier on the network building constraint (shadow price of asphalt). Then 
+\begin{equation}
+I^*_{jk} = \left[ \frac{\gamma}{P_K \delta^I_{jk} (\delta^\tau_{jk})^{\frac{1}{\beta}}} \left( \frac{1}{1+\beta} \sum_{n: P^n_k > P^n_j} P^n_j \left( \frac{P^n_k}{P^n_j} - 1 \right)^{\frac{1+\beta}{\beta}} \right) \right]^{\frac{\beta}{\beta-\gamma}}.
+\end{equation}
+Planners problem is only convex if $\beta \geq \gamma$, i.e., if congestion forces are stronger than returns to infrastructure (DRS). But \citet{fajgelbaum2020optimal} also approximate the non-convex case ($\beta < \gamma \to$ IRS in infrastructure) using simulated annealing methods. \\\vspace{2mm}
+\begin{itemize}
+\item Optimal road investments directed to locations with initially lower levels ($I^0_{jk}$), higher population ($L_j$), and productivity ($Z_j^n$ $\sim$ income per worker). 
+\item IRS incentivizes planner to concentrate flows on a few links (tree-like network).
+\end{itemize}
+\end{frame}
+
+\begin{frame}[label=EXPOU]{Exports - Only Upgrades \quad \hyperlink{IOU}{\beamergotobutton{back}}}
+\begin{tabular}{cc} 
+\$1B: & \includegraphics[width=0.9\textwidth, trim= {0 5mm 0 5mm}, clip]{"../figures/GE/trans_africa_network_GE_20g_1b_fixed_cgc_sigma3.8_rho0_julia_MACR_90kmh_google_good_flows_4_city.pdf"} \\
+\$4B: & \includegraphics[width=0.9\textwidth, trim= {0 5mm 0 5mm}, clip]{"../figures/GE/trans_africa_network_GE_20g_4b_fixed_cgc_sigma3.8_rho0_julia_MACR_90kmh_google_good_flows_4_city.pdf"}  
+\end{tabular}
+\end{frame}
+
+\begin{frame}[label=EXP]{Exports \quad \hyperlink{III}{\beamergotobutton{back}}}
+\begin{tabular}{cc} 
+\$1B: & \includegraphics[width=0.9\textwidth, trim= {0 5mm 0 5mm}, clip]{"../figures/GE/trans_africa_network_GE_add_20g_1b_fixed_cgc_sigma3.8_rho0_julia_MACR_90kmh_google_good_flows_4_city.pdf"} \\
+\$4B: & \includegraphics[width=0.9\textwidth, trim= {0 5mm 0 5mm}, clip]{"../figures/GE/trans_africa_network_GE_add_20g_4b_fixed_cgc_sigma3.8_rho0_julia_MACR_90kmh_google_good_flows_4_city.pdf"}  
+\end{tabular}
+\end{frame}
 
 
 \end{document}
