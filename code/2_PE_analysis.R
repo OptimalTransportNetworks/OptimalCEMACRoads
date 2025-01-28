@@ -31,6 +31,8 @@ settfm(add_links, distance = sp_distance / aere)
 
 
 # Shortest Paths ----------------------------------------------------------
+if(!net |> activate("edges") |> tidygraph::as_tibble() |> select(from, to) |> 
+   atomic_elem() |> all.equal(atomic_elem(select(edges, from, to)))) stop("Mismatch") # Check
 
 distances <- st_network_cost(net, weights = edges$distance) # distance in m
 n_links <- igraph::distances(net)
@@ -255,13 +257,17 @@ st_distance(nodes) %>% extract(lower.tri(.)) %>% quantile(c(0, 0.001, 0.01, 0.02
 
 outcomes_coords <- SPAM_CEMAC |> select(x, y) |> qM()
 nodes_coord_mat <- st_coordinates(nodes) # graph_nodes |> select(lon, lat) |> qM() 
-nodes$N_SPAM <- nodes$SPAM_TOTAL <- nodes$SPAM_TOP80 <- NA_real_
+tfm(nodes) <- c("N_SPAM", "SPAM_TOTAL", "SPAM_TOP80", paste0("SPAM_", TOP80_crops)) |> 
+  sapply(\(x) NA_real_, simplify = FALSE)
 for (i in seq_row(nodes)) {
   d = geodist::geodist(nodes_coord_mat[i, , drop = FALSE], outcomes_coords, measure = "haversine") 
   ind = which(d < 50e3)
   w = 1 - d[ind] / 50e3
   nodes$SPAM_TOTAL[i] = if(length(ind)) fsum.default(SPAM_CEMAC$TOTAL[ind], w = w) else 0
   nodes$SPAM_TOP80[i] = if(length(ind)) fsum.default(SPAM_CEMAC$TOP80[ind], w = w) else 0
+  for (c in TOP80_crops) {
+    nodes[[paste0("SPAM_", c)]][i] = if(length(ind)) fsum.default(SPAM_CEMAC[[c]][ind], w = w) else 0
+  }
   nodes$N_SPAM[i] = length(ind)
 }
 rm(d, ind, w, nodes_coord_mat, outcomes_coords, SPAM); gc()
@@ -466,7 +472,6 @@ tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
   tm_layout(frame = FALSE) 
 dev.off()
-
 
 # Adding trade costs ----------------------------------------------------------------------
 
@@ -912,6 +917,69 @@ times_ext_tmp <- st_network_cost(net_ext_tmp, weights = "duration")[ind_ext_tmp,
 MA_tmp / MA # * MA_real
 (MA_tmp - MA) / 1e9
 rm(list = ls()[endsWith(ls(), "_tmp")]); gc()
+
+# Computing total Crop Access ----------------------------------------------------
+
+for (c in c("TOTAL", "TOP80", TOP80_crops)) {
+  
+  cat(" ", c)
+  cvar <- paste0("SPAM_", c)
+  print(MA_crop <- total_MA_wtd(times, nodes[[cvar]], nodes$population))
+  
+  edges[[sprintf("MA_%s_90_min_speed", cvar)]] <- sapply(seq_row(edges), function(i) {
+    w = copyv(edges$duration, i, edges$duration_imp, vind1 = TRUE)
+    total_MA_wtd(st_network_cost(net, weights = w), nodes[[cvar]], nodes$population)
+  })
+  
+  # Percent increase
+  edges[[sprintf("MA_%s_90_min_speed_perc", cvar)]] <- (edges[[sprintf("MA_%s_90_min_speed", cvar)]] / MA_crop - 1) * 100
+  descr(edges[[sprintf("MA_%s_90_min_speed_perc", cvar)]])
+  
+  tfm(edges_real) <- atomic_elem(edges)
+  
+  Sys.sleep(1)
+  pdf(sprintf("figures/PE/CA/trans_CEMAC_network_MA_%s_90_min_speed_perc_google.pdf", cvar), width = 6.5, height = 8)
+  print(tm_basemap("CartoDB.Positron", zoom = 6) +
+    tm_shape(edges_real) +
+    tm_lines(col = sprintf("MA_%s_90_min_speed_perc", cvar), 
+             col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.01, 0.025, 0.1, 0.25, 0.5, Inf)),
+             col.legend = tm_legend(expression(Delta~"%"~"CA [MTP/min]"), 
+                                    position = c("right", "bottom"), frame = FALSE, 
+                                    text.size = 1.5, title.size = 1.7), lwd = 2) + 
+    tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
+    tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
+    tm_layout(frame = FALSE))
+  dev.off()
+}
+
+# Joint Plot
+tmap_options(raster.max.cells = 1e7)
+
+TOP80_crops_perc <- SPAM_CEMAC |> select(BANA_A:YAMS_A) |> fsum() |> 
+  proportions() |> extract(TOP80_crops) |> multiply_by(100)
+sum(TOP80_crops_perc)
+
+pdf("figures/PE/CA/trans_CEMAC_network_MA_SPAM_JOINT_90_min_speed_perc_google.pdf", width = 11, height = 11)
+tm_basemap("CartoDB.Positron", zoom = 6) +
+  tm_shape(edges_real |> gvr("SPAM_") |> gvr("_perc") |> 
+             gvr("TOTAL", invert = TRUE) |> rm_stub("MA_SPAM_") |>
+             rm_stub("_90_min_speed_perc", FALSE) |> 
+             rename(function(x) paste0(x, " (", round(TOP80_crops_perc[x], 1), "%)"), 
+                    cols = TOP80_crops) |> rm_stub("_A", regex = TRUE) |>
+             rename(TOP80 = "TOP80 (80%)") |>
+             pivot("geometry")) +
+  tm_lines(col = "value", 
+           col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.01, 0.025, 0.1, 0.25, 0.5, Inf)),
+           col.legend = tm_legend(expression(Delta~"%"~"CA [MTP/min]"), 
+                                  position = tm_pos_in(0.56, 0.4), frame = FALSE, 
+                                  text.size = 0.55, title.size = 0.75), lwd = 1.5) + 
+  tm_facets_wrap("variable", ncols = 4) + 
+  tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
+  tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
+  tm_layout(frame = FALSE,
+            panel.label.bg.color = "white",
+            panel.label.frame = FALSE)
+dev.off()
 
 
 # Adding Border Frictions and Repeating ------------------------------------------
