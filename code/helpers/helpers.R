@@ -442,6 +442,13 @@ total_MA <- function(distances, weights) {
   sum(market_access)
 }
 
+total_MA_wtd <- function(distances, weights, wtd) {
+  inv_distance <- 1 / unclass(distances) 
+  diag(inv_distance) <- 0 
+  market_access <- inv_distance %*% weights
+  sum(market_access * wtd)
+}
+
 perch_to_diff <- function(lev, perch) lev - (lev / (perch / 100 + 1))
 
 # Function to convert km/h to meters/min
