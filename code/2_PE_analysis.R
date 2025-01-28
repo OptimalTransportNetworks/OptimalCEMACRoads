@@ -939,7 +939,7 @@ for (c in c("TOTAL", "TOP80", TOP80_crops)) {
   tfm(edges_real) <- atomic_elem(edges)
   
   Sys.sleep(1)
-  pdf(sprintf("figures/PE/CA/trans_CEMAC_network_MA_%s_90_min_speed_perc_google.pdf", cvar), width = 6.5, height = 8)
+  pdf(sprintf("figures/PE/CA/trans_CEMAC_network_CA_%s_90_min_speed_perc_google.pdf", cvar), width = 6.5, height = 8)
   print(tm_basemap("CartoDB.Positron", zoom = 6) +
     tm_shape(edges_real) +
     tm_lines(col = sprintf("MA_%s_90_min_speed_perc", cvar), 
@@ -960,7 +960,7 @@ TOP80_crops_perc <- SPAM_CEMAC |> select(BANA_A:YAMS_A) |> fsum() |>
   proportions() |> extract(TOP80_crops) |> multiply_by(100)
 sum(TOP80_crops_perc)
 
-pdf("figures/PE/CA/trans_CEMAC_network_MA_SPAM_JOINT_90_min_speed_perc_google.pdf", width = 11, height = 11)
+pdf("figures/PE/CA/trans_CEMAC_network_CA_SPAM_JOINT_90_min_speed_perc_google.pdf", width = 11, height = 11)
 tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_shape(edges_real |> gvr("SPAM_") |> gvr("_perc") |> 
              gvr("TOTAL", invert = TRUE) |> rm_stub("MA_SPAM_") |>
@@ -1079,7 +1079,7 @@ for (c in c("TOTAL", "TOP80", TOP80_crops)) {
   tfm(edges_real) <- atomic_elem(edges)
   
   Sys.sleep(1)
-  pdf(sprintf("figures/PE/CA/trans_CEMAC_network_MA_%s_90_min_speed_bt_perc_google.pdf", cvar), width = 6.5, height = 8)
+  pdf(sprintf("figures/PE/CA/trans_CEMAC_network_CA_%s_90_min_speed_bt_perc_google.pdf", cvar), width = 6.5, height = 8)
   print(tm_basemap("CartoDB.Positron", zoom = 6) +
           tm_shape(edges_real) +
           tm_lines(col = sprintf("MA_%s_90_min_speed_bt_perc", cvar), 
@@ -1101,7 +1101,7 @@ TOP80_crops_perc <- SPAM_CEMAC |> select(BANA_A:YAMS_A) |> fsum() |>
 sum(TOP80_crops_perc)
 
 
-pdf("figures/PE/CA/trans_CEMAC_network_MA_SPAM_JOINT_90_min_speed_bt_perc_google.pdf", width = 11, height = 11)
+pdf("figures/PE/CA/trans_CEMAC_network_CA_SPAM_JOINT_90_min_speed_bt_perc_google.pdf", width = 11, height = 11)
 tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_shape(edges_real |> gvr("SPAM_") |> gvr("_bt_perc") |> 
              gvr("TOTAL", invert = TRUE) |> rm_stub("MA_SPAM_") |>
@@ -1471,6 +1471,148 @@ print(ma_gain_per_min_cons / 1e9) # MA gain in billions
 # MA gain per investment:
 print(ma_gain_per_min_cons / sum(with(subset(all_cb_ratios, consensus), cost_km * distance / 1000)))
 }
+
+# Computing Crop Access Cost-Benefits: Joint Scenarios ----------------------------------------------------
+
+
+for (c in c("TOTAL", "TOP80", TOP80_crops)) {
+  
+  cat(" ", c)
+  cvar <- paste0("SPAM_", c)
+  print(MA_crop <- total_MA_wtd(times, nodes[[cvar]], nodes$population))
+  
+  # Baseline Scenario
+  add_links[[sprintf("MA_%s_per_link_90kmh", cvar)]] <- sapply(seq_row(add_links), function(i) {
+    nete = as_sfnetwork(rbind(select(edges, duration), 
+                              subset(add_links, i, duration = duration_90kmh)), directed = FALSE)
+    ind = ckmatch(mctl(st_coordinates(st_geometry(nete, "nodes"))), nodes_coord)
+    total_MA_wtd(st_network_cost(nete, weights = "duration"), nodes[[cvar]][ind], nodes$population[ind])
+  })
+  # Percent increase
+  add_links[[sprintf("MA_%s_per_link_90kmh_perc", cvar)]] <- (add_links[[sprintf("MA_%s_per_link_90kmh", cvar)]] / MA_crop - 1) * 100
+  descr(add_links[[sprintf("MA_%s_per_link_90kmh_perc", cvar)]])
+  
+  print(MA_crop_bt <- total_MA_wtd(times + btt_nodes, nodes[[cvar]], nodes$population))
+  
+  # Added Cost Scenario
+  add_links[[sprintf("MA_%s_per_link_90kmh_bt", cvar)]] <- sapply(seq_row(add_links), function(i) {
+    nete = as_sfnetwork(rbind(select(edges, duration), 
+                              subset(add_links, i, duration = duration_90kmh)), directed = FALSE)
+    ind = ckmatch(nodes_coord, mctl(st_coordinates(st_geometry(nete, "nodes"))))
+    total_MA_wtd(unclass(st_network_cost(nete, weights = "duration"))[ind, ind] + btt_nodes, nodes[[cvar]], nodes$population)
+  })
+  # Percent increase
+  add_links[[sprintf("MA_%s_per_link_90kmh_bt_perc", cvar)]] <- (add_links[[sprintf("MA_%s_per_link_90kmh_bt", cvar)]] / MA_crop_bt - 1) * 100
+  descr(add_links[[sprintf("MA_%s_per_link_90kmh_bt_perc", cvar)]])
+  
+  # Computing Cost-Benefit Ratios
+  edges <- eval(parse(text = sprintf("transform(edges, 
+    MA_%s_gain_pusd = perch_to_diff(MA_%s_90_min_speed, MA_%s_90_min_speed_perc) / (ug_cost_km * distance / 1000) |> replace_inf(),
+    MA_%s_gain_pusd_bt = perch_to_diff(MA_%s_90_min_speed_bt, MA_%s_90_min_speed_bt_perc) / (ug_cost_km * distance / 1000) |> replace_inf()
+  )", cvar, cvar, cvar, cvar, cvar, cvar))) 
+  
+  add_links <- eval(parse(text = sprintf("transform(add_links, 
+    MA_%s_gain_90kmh_pusd = perch_to_diff(MA_%s_per_link_90kmh, MA_%s_per_link_90kmh_perc) / (cost_km * distance / 1000) |> replace_inf(),
+    MA_%s_gain_90kmh_pusd_bt = perch_to_diff(MA_%s_per_link_90kmh_bt, MA_%s_per_link_90kmh_bt_perc) / (cost_km * distance / 1000) |> replace_inf()
+  )", cvar, cvar, cvar, cvar, cvar, cvar))) 
+  
+}
+
+tfm(edges_real) <- atomic_elem(edges)
+  
+# Combining Datasets
+all_cb_ratios <- rowbind(add_links |> gvr("MA_SPAM_") |> gvr("_pusd") |> rm_stub("90kmh_", regex = TRUE),
+                         edges_real |> gvr("MA_SPAM_") |> gvr("_pusd")) 
+tfm(all_cb_ratios) <- all_costs |> atomic_elem()
+descr(all_cb_ratios)
+  
+# Now Saving the plots
+for (c in c("TOTAL", "TOP80", TOP80_crops)) {
+  
+  Sys.sleep(1)
+  pdf(sprintf("figures/PE/CA/individual/trans_CEMAC_network_CA_SPAM_%s_gain_all_90kmh_pusd_google.pdf", c), width = 6.5, height = 8)
+  print(tm_basemap("CartoDB.Positron", zoom = 6) +
+          tm_shape(all_cb_ratios) + 
+          tm_lines(col = sprintf("MA_SPAM_%s_gain_pusd", c), 
+                   col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.02, 0.1, 0.2, 0.5, 1, 2, 5, Inf)*50),
+                   col.legend = tm_legend(expression(Delta~"CA/USD"),
+                                          position = tm_pos_in(0.68, 0.47), frame = FALSE, 
+                                          text.size = 1.2, title.size = 1.7), lwd = 2) + 
+          tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
+          tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
+          tm_layout(frame = FALSE))
+  dev.off()
+  
+  Sys.sleep(1)
+  pdf(sprintf("figures/PE/CA/individual/trans_CEMAC_network_CA_SPAM_%s_gain_all_90kmh_pusd_bt_google.pdf", c), width = 6.5, height = 8)
+  print(tm_basemap("CartoDB.Positron", zoom = 6) +
+          tm_shape(all_cb_ratios) + 
+          tm_lines(col = sprintf("MA_SPAM_%s_gain_pusd_bt", c), 
+                   col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.02, 0.1, 0.2, 0.5, 1, 2, 5, Inf)*50),
+                   col.legend = tm_legend(expression(Delta~"CA/USD"),
+                                          position = tm_pos_in(0.68, 0.47), frame = FALSE, 
+                                          text.size = 1.2, title.size = 1.7), lwd = 2) + 
+          tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
+          tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
+          tm_layout(frame = FALSE))
+  dev.off()
+}
+
+# Joint Plot
+tmap_options(raster.max.cells = 1e7)
+
+TOP80_crops_perc <- SPAM_CEMAC |> select(BANA_A:YAMS_A) |> fsum() |> 
+  proportions() |> extract(TOP80_crops) |> multiply_by(100)
+sum(TOP80_crops_perc)
+
+# No Frictions
+pdf("figures/PE/CA/trans_CEMAC_network_CA_SPAM_JOINT_gain_all_90kmh_pusd_google.pdf", width = 11, height = 11)
+tm_basemap("CartoDB.Positron", zoom = 6) +
+  tm_shape(all_cb_ratios |> gvr("pusd$") |> 
+             gvr("TOTAL", invert = TRUE) |> rm_stub("MA_SPAM_") |>
+             rm_stub("_gain_pusd", FALSE) |> 
+             rename(function(x) paste0(x, " (", round(TOP80_crops_perc[x], 1), "%)"), 
+                    cols = TOP80_crops) |> rm_stub("_A", regex = TRUE) |>
+             rename(TOP80 = "TOP80 (80%)") |>
+             pivot("geometry")) +
+  tm_lines(col = "value", 
+           col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.02, 0.1, 0.2, 0.5, 1, 2, 5, Inf)*50),
+           col.legend = tm_legend(expression(Delta~"CA/USD"), 
+                                  position = tm_pos_in(0.7, 0.49), frame = FALSE, 
+                                  text.size = 0.55, title.size = 0.7), lwd = 1.5) + 
+  tm_facets_wrap("variable", ncols = 4) + 
+  tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
+  tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
+  tm_layout(frame = FALSE,
+            panel.label.bg.color = "white",
+            panel.label.frame = FALSE)
+dev.off()
+
+# With Frictions
+pdf("figures/PE/CA/trans_CEMAC_network_CA_SPAM_JOINT_gain_all_90kmh_pusd_bt_google.pdf", width = 11, height = 11)
+tm_basemap("CartoDB.Positron", zoom = 6) +
+  tm_shape(all_cb_ratios |> gvr("pusd_bt") |> 
+             gvr("TOTAL", invert = TRUE) |> rm_stub("MA_SPAM_") |>
+             rm_stub("_gain_pusd_bt", FALSE) |> 
+             rename(function(x) paste0(x, " (", round(TOP80_crops_perc[x], 1), "%)"), 
+                    cols = TOP80_crops) |> rm_stub("_A", regex = TRUE) |>
+             rename(TOP80 = "TOP80 (80%)") |>
+             pivot("geometry")) +
+  tm_lines(col = "value", 
+           col.scale = tm_scale_intervals(values = "turbo", breaks = c(0, 0.02, 0.1, 0.2, 0.5, 1, 2, 5, Inf)*50),
+           col.legend = tm_legend(expression(Delta~"CA/USD"), 
+                                  position = tm_pos_in(0.7, 0.49), frame = FALSE, 
+                                  text.size = 0.55, title.size = 0.7), lwd = 1.5) + 
+  tm_facets_wrap("variable", ncols = 4) + 
+  tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
+  tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
+  tm_layout(frame = FALSE,
+            panel.label.bg.color = "white",
+            panel.label.frame = FALSE)
+dev.off()
+
+tmap_options(raster.max.cells = 1e6)
+
 
 # Optimizing Border Posts ------------------------------------------------------------------------------------------
 
