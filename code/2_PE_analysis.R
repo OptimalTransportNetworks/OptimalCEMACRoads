@@ -56,6 +56,7 @@ sp_distances_ext <- st_distance(st_geometry(net_ext, "nodes"))[ind_ext, ind_ext]
 identical(sp_distances_ext, sp_distances)
 
 distances_ext <- st_network_cost(net_ext, weights = "distance")[ind_ext, ind_ext]
+all.equal(sp_distances_ext, sp_distances)
 nre_ext <- mean(sp_distances_ext / distances_ext, na.rm = TRUE)
 
 nre_ext / nre
@@ -75,7 +76,6 @@ add_links$nre_gain_perc <- (unattrib(add_links$nre_per_link / nre) - 1) * 100
 descr(add_links$nre_gain_perc)
 
 # Plot percent increase
-# <Figure 19: LHS>
 pdf("figures/PE/trans_CEMAC_network_NRE_gain_perc.pdf", width = 6.5, height = 8)
 tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_shape(edges_real) +
@@ -95,6 +95,7 @@ dev.off()
 gravity <- replace_inf(tcrossprod(nodes$population) / sp_distances, set = TRUE) |> unclass()
 nre_wtd <- fmean(unattrib(sp_distances / distances), w = gravity)
 rnre_wtd <- fmean(unattrib(sp_distances / dist_ttime_mats$distances), w = gravity)
+all.equal(sp_distances_ext, sp_distances)
 nre_ext_wtd <- fmean(unattrib(sp_distances_ext / distances_ext), w = gravity)
 
 rnre_wtd
@@ -128,6 +129,11 @@ tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
   tm_layout(frame = FALSE) 
 dev.off()
+
+
+# (Optional) loading saved results ------------------------------------------------------------
+
+qreadm("results/transport_network/PE/PE_results_MACR_90kmh_google.qs")
 
 # Market Access -------------------------------------------------------------------------------
 
@@ -420,7 +426,6 @@ dev.off()
 #     geom_histogram() +
 #     facet_wrap(~variable)
 
-
 # Computing total market access ----------------------------------------------------
 
 (MA_real <- total_MA(dist_ttime_mats$distances, nodes$gdp))
@@ -461,7 +466,6 @@ tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
   tm_layout(frame = FALSE) 
 dev.off()
-
 
 
 # Adding trade costs ----------------------------------------------------------------------
@@ -1264,9 +1268,12 @@ for (i in c(0, 0.5, 1, 2)) {
 cat("MA Gain greatern than ", i, fill = TRUE)
 
 # Consensus Package
+# settfm(all_cb_ratios, 
+#        consensus = is.finite(MA_gain_pusd) & (MA_gain_pusd > i & MA_gain_pusd_bt > i), # MA_gain_pusd_bt_opt > i # 1, 2, or 4
+#        MA_gain_pusd_cons = pmean(MA_gain_pusd, MA_gain_pusd_bt)) # MA_gain_pusd_bt_opt
 settfm(all_cb_ratios, 
-       consensus = is.finite(MA_gain_pusd) & (MA_gain_pusd > i & MA_gain_pusd_bt > i), # MA_gain_pusd_bt_opt > i # 1, 2, or 4
-       MA_gain_pusd_cons = pmean(MA_gain_pusd, MA_gain_pusd_bt)) # MA_gain_pusd_bt_opt
+       consensus = is.finite(MA_gain_pusd) & MA_gain_pusd > i & type == "existing", # MA_gain_pusd_bt_opt > i # 1, 2, or 4
+       MA_gain_pusd_cons = MA_gain_pusd)
 tfm(all_cb_ratios_se) <- atomic_elem(all_cb_ratios)
 
 # <Figure 32: Last 3 Plots>
@@ -1453,7 +1460,8 @@ packages <- c(
   "All Upgrades" = 19e9,
   "All Links MA > 0.5 Avg" = 4.3e9, 
   "All Links MA > 1 NoFR" = 5.4e9, 
-  "All Links MA > 1 NFNN" = 4e9
+  "All Links MA > 1 NFNN" = 4e9,
+  "Regional Projects" = 3.4e9
 )
 
 calc_rates <- function(x, bgr) {
