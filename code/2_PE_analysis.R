@@ -1683,6 +1683,78 @@ tm_basemap("CartoDB.Positron", zoom = 6) +
   tm_layout(frame = FALSE)
 dev.off()
 
+# Repeating with Crop Access ++++++++++++++++++++++++++++++++++
+
+tmap_options(raster.max.cells = 1e6)
+
+for (c in c("TOTAL", "TOP80", TOP80_crops)) {
+  
+  cat(" ", c)
+  cvar <- paste0("SPAM_", c)
+  cv <- sprintf("MA_%s_bt_90percto12h_red", cvar)
+  cvp <- paste0(cv, "_perc")
+  print(MA_crop_opt <- total_MA_wtd(times_bt, nodes[[cvar]], nodes$population))
+  
+  edges[[cv]] <- sapply(seq_row(edges), function(i) {
+    w = copyv(edges$total_time, i, edges$duration[i] + 12*60, vind1 = TRUE)
+    total_MA_wtd(unclass(st_network_cost(net, weights = w)), nodes[[cvar]], nodes$population)
+  })
+  # Percent increase
+  edges[[cvp]] <- (edges[[cv]] / MA_crop_opt - 1) * 100
+  edges[[cvp]][edges[[cvp]] < 1e-5] <- NA
+  descr(edges[[cvp]])
+
+  tfm(edges_real) <- atomic_elem(edges)
+  
+  Sys.sleep(1)
+  
+  pdf(sprintf("figures/PE/CA/individual/trans_CEMAC_network_CA_%s_bt_90percto12h_red_perc_google.pdf", cvar), width = 6.5, height = 8)
+  print(tm_basemap("CartoDB.Positron", zoom = 6) +
+    tm_shape(edges_real) +
+    tm_lines(col = cvp, 
+             col.scale = tm_scale_continuous(6, values = "yl_or_rd", trans = "log1p"),
+             col.legend = tm_legend(expression(Delta~"%"~"CA [MTP/min]"), 
+                                    position = c("right", "bottom"), frame = FALSE, 
+                                    text.size = 1.5, title.size = 1.7), lwd = 2) + 
+    tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
+    tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
+    tm_layout(frame = FALSE))
+  dev.off()
+}
+
+# Joint Plot
+tmap_options(raster.max.cells = 1e7)
+
+TOP80_crops_perc <- SPAM_CEMAC |> select(BANA_A:YAMS_A) |> fsum() |> 
+  proportions() |> extract(TOP80_crops) |> multiply_by(100)
+sum(TOP80_crops_perc)
+
+
+pdf("figures/PE/CA/trans_CEMAC_network_CA_SPAM_JOINT_bt_90percto12h_red_perc_google.pdf", width = 11, height = 11)
+tm_basemap("CartoDB.Positron", zoom = 6) +
+  tm_shape(edges_real |> gvr("SPAM_") |> gvr("90percto12h_red_perc") |> 
+             gvr("TOTAL", invert = TRUE) |> rm_stub("MA_SPAM_") |>
+             rm_stub("_bt_90percto12h_red_perc", FALSE) |> 
+             rename(function(x) paste0(x, " (", round(TOP80_crops_perc[x], 1), "%)"), 
+                    cols = TOP80_crops) |> rm_stub("_A", regex = TRUE) |>
+             rename(TOP80 = "TOP80 (80%)") |>
+             pivot("geometry")) +
+  tm_lines(col = "value", 
+           col.scale = tm_scale_continuous(8, values = "yl_or_rd", trans = "log1p"),
+           col.legend = tm_legend(expression(Delta~"%"~"CA [MTP/min]"), 
+                                  position = tm_pos_in(0.56, 0.44), frame = FALSE, 
+                                  text.size = 0.55, title.size = 0.75), lwd = 1.5) + 
+  tm_facets_wrap("variable", ncols = 4) + 
+  tm_shape(subset(nodes, population > 0)) + tm_dots(size = 0.1) +
+  tm_shape(subset(nodes, population <= 0)) + tm_dots(size = 0.1, fill = "grey70") +
+  tm_layout(frame = FALSE,
+            panel.label.bg.color = "white",
+            panel.label.frame = FALSE)
+dev.off()
+
+tmap_options(raster.max.cells = 1e6)
+
+
 # 100% reduction ++++++++++++++++++++++++++++++++++++++++++++++
 
 edges$MA_bt_100perc_red <- sapply(seq_row(edges), function(i) {
